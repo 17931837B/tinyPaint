@@ -1,62 +1,50 @@
-# include <glad/glad.h>
-# include <GLFW/glfw3.h>
+#include <GL/glew.h> 
+#include <GL/glut.h>
+#include <iostream>
 
-# include <glm/glm.hpp>
-# include <iostream>
-
-const unsigned int WINDOW_WIDTH = 800;
-const unsigned int WINDOW_HEIGHT = 640;
-
-void keyHandler(GLFWwindow*, int, int, int, int);
-
-int main()
+void	display(void)
 {
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(1.0f, 0.f, 0.f);	
+	// glBegin(GL_TRIANGLES);
+	// 	glVertex2f(-0.5f, -0.5f);
+	// 	glVertex2f(0.5f, -0.5f);
+	// 	glVertex2f(0.f, 0.5f);
+	// glEnd();
+	float vertices[] = {
+		-0.5f, -0.5f, 0.0f,
+		0.5f, -0.5f, 0.0f,
+		0.0f,  0.5f, 0.0f
+		};
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "HelloOpenGL", nullptr, nullptr);
-
-	if (!window)
-	{
-		std::cerr << "Failed to create window." << std::endl;
-		glfwTerminate();
-		return (-1);
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetKeyCallback(window, keyHandler);
-
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
-	{
-		std::cerr << "Failed to initialize GLAD" << std::endl;
-		return -1;
-	}
-
-	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-	while (!glfwWindowShouldClose(window))
-	{
-		glClear(GL_COLOR_BUFFER_BIT);
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
-	glfwTerminate();
-	return 0;
+	glFlush();
 }
 
-void keyHandler(GLFWwindow *window, int key, int scancode, int action, int mods)
+int	main(int argc, char **argv)
 {
-    switch (key)
-    {
-        case GLFW_KEY_ESCAPE:
-            if (action == GLFW_PRESS)
-            {
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-            }
-            break;
-    }
+	glutInit(&argc, argv);
+
+	glutInitWindowSize(640, 480);
+	glutInitDisplayMode(GLUT_RGBA);
+	glutCreateWindow("Hello");
+
+	GLenum err = glewInit();
+	if (GLEW_OK != err)
+	{
+		std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+		// fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+		return 1; // エラー終了
+	}
+
+	glutDisplayFunc(display);
+	glClearColor(1.f, 1.f, 1.f, 1.f);
+	glutMainLoop();
+	return (0);
 }
