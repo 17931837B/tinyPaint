@@ -2,6 +2,9 @@
 #include <GL/glut.h>
 #include <iostream>
 
+const unsigned int WINDOW_WIDTH = 800;
+const unsigned int WINDOW_HEIGHT = 640;
+
 void	display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -31,7 +34,7 @@ int	main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
 
-	glutInitWindowSize(640, 480);
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInitDisplayMode(GLUT_RGBA);
 	glutCreateWindow("Hello");
 
