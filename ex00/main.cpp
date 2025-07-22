@@ -14,18 +14,15 @@ void	display(void)
 	// 	glVertex2f(0.5f, -0.5f);
 	// 	glVertex2f(0.f, 0.5f);
 	// glEnd();
+	glEnableClientState(GL_VERTEX_ARRAY);
 	float vertices[] = {
 		-0.5f, -0.5f, 0.0f,
 		0.5f, -0.5f, 0.0f,
 		0.0f,  0.5f, 0.0f
 		};
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	glVertexPointer(3, GL_FLOAT, 0, vertices);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDisableClientState(GL_VERTEX_ARRAY);
 
 	glFlush();
 }
@@ -36,7 +33,7 @@ int	main(int argc, char **argv)
 
 	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInitDisplayMode(GLUT_RGBA);
-	glutCreateWindow("Hello");
+	glutCreateWindow("Hell");
 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
