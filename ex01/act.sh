@@ -1,3 +1,3 @@
-c++  -o a main.cpp  -lGL -lGLU -lglut -lGLEW 
+c++ -o a main.cpp -lGLEW -lglfw -lGLU -lGL
 ./a
 rm -rf a
