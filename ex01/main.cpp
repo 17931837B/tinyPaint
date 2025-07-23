@@ -4,8 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <GL/glu.h>
 
-GLuint  texId;
-GLuint  fboId;
+GLuint 	texId;
+GLuint 	fboId;
 
 struct	ImageData
 {
@@ -13,6 +13,9 @@ struct	ImageData
 	int	height;
 	unsigned char*	imageData;
 };
+
+ImageData*	globalImg = nullptr;
+GLFWwindow*	window; 
 
 ImageData*	createRedImage(int width, int height)
 {
@@ -29,9 +32,6 @@ ImageData*	createRedImage(int width, int height)
 	}
 	return (img);
 }
-
-ImageData*	globalImg = nullptr;
-GLFWwindow*	window; 
 
 void	framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -105,6 +105,9 @@ void display()
 
 int main(int argc, char **argv)
 {
+	int	initialWidth;
+	int	initialHeight;
+
 	if (!glfwInit())
 	{
 		std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -135,7 +138,6 @@ int main(int argc, char **argv)
 	glfwSetKeyCallback(window, key_callback);
 	otherInit();
 	LoadTexture();
-	int initialWidth, initialHeight;
 	glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
 	framebuffer_size_callback(window, initialWidth, initialHeight);
 	while (!glfwWindowShouldClose(window))
