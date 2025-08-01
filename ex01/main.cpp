@@ -20,7 +20,7 @@ GLFWwindow*	window;
 ImageData* createRedImage(int width, int height)
 {
 	ImageData*	img;
-	int			i;
+	// int			i;
 
 	img = new ImageData();
 	img->width = width;
@@ -38,7 +38,7 @@ ImageData* createRedImage(int width, int height)
 	return (img);
 }
 
-void	framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
 	float	textureAspect;
 	float	windowAspect;
@@ -67,7 +67,7 @@ void	framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glLoadIdentity();
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -120,7 +120,7 @@ void	display()
 	glDisable(GL_TEXTURE_2D);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	int	initialWidth;
 	int	initialHeight;
