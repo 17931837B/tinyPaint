@@ -3,40 +3,33 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <GL/glu.h>
+#include "ImageData.hpp"
 
-GLuint	texId;
-GLuint	fboId;
-
-struct 	ImageData
-{
-	int				width;
-	int				height;
-	unsigned char*	imageData;
-};
-
+GLuint		texId;
+GLuint		fboId;
 ImageData*	globalImg = nullptr;
-GLFWwindow*	window; 
+GLFWwindow*	window;
 
-ImageData* createRedImage(int width, int height)
-{
-	ImageData*	img;
-	// int			i;
+// ImageData* createRedImage(int width, int height)
+// {
+// 	ImageData*	img;
+// 	// int			i;
 
-	img = new ImageData();
-	img->width = width;
-	img->height = height;
-	img->imageData = new unsigned char[width * height * 4];
-	// i = 0;
-	// while (i < width * height)
-	// {
-	// 	img->imageData[i * 4 + 0] = 255;
-	// 	img->imageData[i * 4 + 1] = 0;
-	// 	img->imageData[i * 4 + 2] = 0;
-	// 	img->imageData[i * 4 + 3] = 255;
-	// 	i++;
-	// }
-	return (img);
-}
+// 	img = new ImageData();
+// 	img->width = width;
+// 	img->height = height;
+// 	img->imageData = new unsigned char[width * height * 4];
+// 	// i = 0;
+// 	// while (i < width * height)
+// 	// {
+// 	// 	img->imageData[i * 4 + 0] = 255;
+// 	// 	img->imageData[i * 4 + 1] = 0;
+// 	// 	img->imageData[i * 4 + 2] = 0;
+// 	// 	img->imageData[i * 4 + 3] = 255;
+// 	// 	i++;
+// 	// }
+// 	return (img);
+// }
 
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
@@ -49,7 +42,7 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	textureAspect = (float)globalImg->width / (float)globalImg->height;
+	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
 	std::cout << "win " <<windowAspect << " tex " <<textureAspect << std::endl;
 	if (windowAspect > textureAspect)
@@ -84,18 +77,18 @@ void LoadTexture()
 	int	width;
 	int	height;
 
-	globalImg = createRedImage(4096, 4096);
+	globalImg = new ImageData(4096, 4096);
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, globalImg->width, globalImg->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, globalImg->imageData);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, globalImg->getWidth(), globalImg->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, globalImg->getImageData());
 	glGenFramebuffers(1, &fboId);
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texId, 0);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "Framebuffer is not complete!" << std::endl;
-	glViewport(0, 0, globalImg->width, globalImg->height);
+	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -166,7 +159,6 @@ int main(void)
 	}
 	if (globalImg)
 	{
-		delete[] globalImg->imageData;
 		delete globalImg;
 		globalImg = nullptr;
 	}
