@@ -122,58 +122,59 @@ void	display()
 
 int main(int argc, char **argv)
 {
-    int initialWidth;
-    int initialHeight;
+	int	initialWidth;
+	int	initialHeight;
 
-    if (!glfwInit())
-    {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return (-1);
-    }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE); 
-    window = glfwCreateWindow(4096, 4096, "OpenGL Exercise 01", NULL, NULL); 
-    if (!window)
-    {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return (-1);
-    }
-    glfwMakeContextCurrent(window);
-    glewExperimental = GL_TRUE; 
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-        std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
-        glfwTerminate();
-        return (1);
-    }
-    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
-    std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetKeyCallback(window, key_callback);
-    otherInit();
-    LoadTexture();
-    glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
-    framebuffer_size_callback(window, initialWidth, initialHeight);
-    while (!glfwWindowShouldClose(window))
-    {
-        display();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-    if (globalImg)
-    {
-        delete[] globalImg->imageData;
-        delete globalImg;
-        globalImg = nullptr;
-    }
-    if (texId)
-    {
-        glDeleteTextures(1, &texId);
-        texId = 0;
-    }
-    glfwTerminate();
-    return (0);
+	if (!glfwInit())
+	{
+		std::cerr << "Failed to initialize GLFW" << std::endl;
+		return (-1);
+	}
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE); 
+	window = glfwCreateWindow(4096, 4096, "TinyPaint ex01", NULL, NULL); 
+	if (!window)
+	{
+		std::cerr << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return (-1);
+	}
+	glfwMakeContextCurrent(window);
+	glewExperimental = GL_TRUE; 
+	GLenum err;
+	err = glewInit();
+	if (err != GLEW_OK)
+	{
+		std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+		glfwTerminate();
+		return (1);
+	}
+	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+	std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetKeyCallback(window, key_callback);
+	otherInit();
+	LoadTexture();
+	glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
+	framebuffer_size_callback(window, initialWidth, initialHeight);
+	while (!glfwWindowShouldClose(window))
+	{
+		display();
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+	if (globalImg)
+	{
+		delete[] globalImg->imageData;
+		delete globalImg;
+		globalImg = nullptr;
+	}
+	if (texId)
+	{
+		glDeleteTextures(1, &texId);
+		texId = 0;
+	}
+	glfwTerminate();
+	return (0);
 }
