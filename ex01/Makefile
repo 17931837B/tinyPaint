@@ -1,7 +1,7 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++11 -pedantic
 LDFLAGS = -lglfw -lGLEW -lGL -lGLU
-INFILES = 	main.cpp
+INFILES = 	main.cpp ImageData.cpp
 
 OBJFILES = $(INFILES:.cpp=.o)
 
