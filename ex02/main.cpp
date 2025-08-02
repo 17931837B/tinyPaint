@@ -51,6 +51,8 @@ void otherInit(void)
 	glEnable(GL_DEPTH_TEST); //深度テスト手前のみを描写
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //アルファブレンド
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE); //加算ブレンド
+	glBlendEquation(GL_FUNC_ADD);
 }
 
 void LoadTexture()
