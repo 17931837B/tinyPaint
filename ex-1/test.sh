@@ -1,1 +1,0 @@
-g++ -o test main.cpp glad.c -ldl -lglfw
