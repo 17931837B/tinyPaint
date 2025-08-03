@@ -5,9 +5,6 @@
 #include <algorithm>
 #include <cstring>
 
-#define CIRCLE_SEGMENTS 16
-#define NUM_BRUSH_SIZES 7
-
 class	ImageData
 {
 	private:
