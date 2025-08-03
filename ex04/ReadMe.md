@@ -1,7 +1,7 @@
 
-#### void	glBlendFunc(GLenum sfactor, GLenum dfaactor)
-| sfactor |dfactor| 内容 |
-| :------------------: | :----------------------------: | :-------------------------: |
-| GL_SRC_ALPHA | GL_ONE_MINUS_SRC_ALPHA | アルファブレンド |
-| GL_SRC_ALPHA | GL_ONE | 加算ブレンド |
-| GLZERO | GL_SRC_COLOR | 乗算ブレンド |
+#### stb_image_write
+画像ファイルを出力するための外部ライブラリ。  
+```
+make dl
+```
+で事前にインストールすること。
