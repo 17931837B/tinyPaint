@@ -1,5 +1,9 @@
 #include "paint.hpp"
 
+// stb_image_write の実装をここで1回だけ定義
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 GLuint		texId;
 GLuint		fboId;
 ImageData*	globalImg = nullptr;
@@ -361,25 +365,36 @@ void saveImage()
 	char filename[256];
 	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d_%H%M%S.png", timeinfo);
 	
-	// 簡易PNG保存（実際にはstb_image_writeなどのライブラリを使用する）
-	// ここでは仮の実装として、PPM形式で保存
-	std::string ppmFilename = std::string(filename);
-	ppmFilename = ppmFilename.substr(0, ppmFilename.find_last_of('.')) + ".ppm";
+	// PNG形式で保存
+	int result = stbi_write_png(filename, width, height, 4, flippedPixels, width * 4);
 	
-	FILE* file = fopen(ppmFilename.c_str(), "wb");
-	if (file)
+	if (result)
 	{
-		fprintf(file, "P6\n%d %d\n255\n", width, height);
-		for (int i = 0; i < width * height; i++)
-		{
-			fwrite(&flippedPixels[i * 4], 3, 1, file); // RGBのみ保存（Alphaは除く）
-		}
-		fclose(file);
-		std::cout << "Image saved as: " << ppmFilename << std::endl;
+		std::cout << "Image saved as: " << filename << std::endl;
 	}
 	else
 	{
-		std::cerr << "Failed to save image!" << std::endl;
+		std::cerr << "Failed to save PNG image!" << std::endl;
+		
+		// フォールバック：PPM形式で保存
+		std::string ppmFilename = std::string(filename);
+		ppmFilename = ppmFilename.substr(0, ppmFilename.find_last_of('.')) + ".ppm";
+		
+		FILE* file = fopen(ppmFilename.c_str(), "wb");
+		if (file)
+		{
+			fprintf(file, "P6\n%d %d\n255\n", width, height);
+			for (int i = 0; i < width * height; i++)
+			{
+				fwrite(&flippedPixels[i * 4], 3, 1, file); // RGBのみ保存（Alphaは除く）
+			}
+			fclose(file);
+			std::cout << "Fallback: Image saved as PPM: " << ppmFilename << std::endl;
+		}
+		else
+		{
+			std::cerr << "Failed to save image in any format!" << std::endl;
+		}
 	}
 	
 	delete[] pixels;
