@@ -59,7 +59,7 @@ int main(void)
 	std::cout << "=== Drawing ===" << std::endl;
 	std::cout << "Left mouse drag: Draw" << std::endl;
 	std::cout << "=== Save ===" << std::endl;
-	std::cout << "S: Save image to PPM file" << std::endl;
+	std::cout << "S: Save image to PNG file" << std::endl;
 	
 	while (!glfwWindowShouldClose(window))
 	{
