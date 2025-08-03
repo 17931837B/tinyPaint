@@ -1,6 +1,4 @@
 #include "paint.hpp"
-
-// stb_image_write の実装をここで1回だけ定義
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -331,72 +329,58 @@ void	display()
 	glDisable(GL_TEXTURE_2D);
 }
 
-// 新しく追加：画像保存関数
+//画像保存
 void saveImage()
 {
-	int width = globalImg->getWidth();
-	int height = globalImg->getHeight();
-	
-	// OpenGLからピクセルデータを読み込み
-	unsigned char* pixels = new unsigned char[width * height * 4];
-	
+	int	width;
+	int	height;
+	unsigned char* pixels;
+	unsigned char* flippedPixels;
+	int srcIndex;
+	int dstIndex;
+	time_t now;
+	struct tm* timeinfo;
+	char filename[256];
+	std::string filepath;
+	int	res;
+	int	x, y;
+
+    struct stat st = {0};
+    if (stat("output", &st) == -1)
+		mkdir("output", 0700);
+	width = globalImg->getWidth();
+	height = globalImg->getHeight();
+	pixels = new unsigned char[width * height * 4];
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
-	// Y軸を反転（OpenGLは下から上、PNGは上から下）
-	unsigned char* flippedPixels = new unsigned char[width * height * 4];
-	for (int y = 0; y < height; y++)
+	flippedPixels = new unsigned char[width * height * 4];
+	//y軸反転
+	y = 0;
+	while (y < height)
 	{
-		for (int x = 0; x < width; x++)
+		x = 0;
+		while (x < width)
 		{
-			int srcIndex = ((height - 1 - y) * width + x) * 4;
-			int dstIndex = (y * width + x) * 4;
+			srcIndex = ((height - 1 - y) * width + x) * 4;
+			dstIndex = (y * width + x) * 4;
 			flippedPixels[dstIndex + 0] = pixels[srcIndex + 0];
 			flippedPixels[dstIndex + 1] = pixels[srcIndex + 1];
 			flippedPixels[dstIndex + 2] = pixels[srcIndex + 2];
 			flippedPixels[dstIndex + 3] = pixels[srcIndex + 3];
+			x++;
 		}
+		y++;
 	}
-	
-	// ファイル名を生成（タイムスタンプ付き）
-	time_t now = time(0);
-	struct tm* timeinfo = localtime(&now);
-	char filename[256];
-	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d_%H%M%S.png", timeinfo);
-	
-	// PNG形式で保存
-	int result = stbi_write_png(filename, width, height, 4, flippedPixels, width * 4);
-	
-	if (result)
-	{
+	now = time(0);
+	timeinfo = localtime(&now);
+	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d%H%M%S.png", timeinfo);
+	filepath = "output/" + std::string(filename);
+	res = stbi_write_png(filepath.c_str(), width, height, 4, flippedPixels, width * 4);
+	if (res)
 		std::cout << "Image saved as: " << filename << std::endl;
-	}
 	else
-	{
 		std::cerr << "Failed to save PNG image!" << std::endl;
-		
-		// フォールバック：PPM形式で保存
-		std::string ppmFilename = std::string(filename);
-		ppmFilename = ppmFilename.substr(0, ppmFilename.find_last_of('.')) + ".ppm";
-		
-		FILE* file = fopen(ppmFilename.c_str(), "wb");
-		if (file)
-		{
-			fprintf(file, "P6\n%d %d\n255\n", width, height);
-			for (int i = 0; i < width * height; i++)
-			{
-				fwrite(&flippedPixels[i * 4], 3, 1, file); // RGBのみ保存（Alphaは除く）
-			}
-			fclose(file);
-			std::cout << "Fallback: Image saved as PPM: " << ppmFilename << std::endl;
-		}
-		else
-		{
-			std::cerr << "Failed to save image in any format!" << std::endl;
-		}
-	}
-	
 	delete[] pixels;
 	delete[] flippedPixels;
 }
