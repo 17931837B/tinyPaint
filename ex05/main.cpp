@@ -70,10 +70,7 @@ int main(void)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-	
-	// クリーンアップ
-	cleanupUndoSystem(); // アンドゥシステムのクリーンアップ
-	
+	cleanupUndoSystem();
 	if (globalImg)
 	{
 		delete globalImg;

@@ -9,35 +9,74 @@
 #include <queue>
 #include <atomic>
 #include <fstream>
+#include <stdexcept>
 
-// 画像差分データ構造
-struct ImageDiff {
-    int minX, minY, maxX, maxY; // バウンディングボックス
-    std::vector<unsigned char> beforeData; // RLE圧縮された前の状態
-    std::vector<unsigned char> afterData;  // RLE圧縮された後の状態
-    
-    // RLE圧縮関数
-    static std::vector<unsigned char> compressRLE(const unsigned char* data, int width, int height, int startX, int startY, int endX, int endY);
-    static void decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int height, int startX, int startY, int endX, int endY);
-    
-    // シリアライゼーション
-    void serialize(std::ofstream& file) const;
-    void deserialize(std::ifstream& file);
-    size_t getSerializedSize() const;
-};
+// 画像差分データ構造をクラスに書き換え
+#include "ImageDiff.hpp"
+// class ImageDiff {
+// public:
+//     // コンストラクタ
+//     ImageDiff() : minX(0), minY(0), maxX(0), maxY(0) {}
 
-// アンドゥスタックエントリ
-struct UndoStackEntry {
+//     // RLE圧縮関数
+//     static std::vector<unsigned char> compressRLE(const unsigned char* data, int width, int height, int startX, int startY, int endX, int endY);
+//     static void decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int height, int startX, int startY, int endX, int endY);
+
+//     // シリアライゼーション
+//     void serialize(std::ofstream& file) const;
+//     void deserialize(std::ifstream& file);
+//     size_t getSerializedSize() const;
+
+//     // ゲッター関数
+//     int getMinX() const { return minX; }
+//     int getMinY() const { return minY; }
+//     int getMaxX() const { return maxX; }
+//     int getMaxY() const { return maxY; }
+//     const std::vector<unsigned char>& getBeforeData() const { return beforeData; }
+//     const std::vector<unsigned char>& getAfterData() const { return afterData; }
+    
+//     // セッター関数 (UndoSystemからのみ設定できるようにする)
+//     void setBoundingBox(int minX, int minY, int maxX, int maxY) {
+//         this->minX = minX;
+//         this->minY = minY;
+//         this->maxX = maxX;
+//         this->maxY = maxY;
+//     }
+//     void setBeforeData(const std::vector<unsigned char>& data) { beforeData = data; }
+//     void setAfterData(const std::vector<unsigned char>& data) { afterData = data; }
+
+// private:
+//     int minX, minY, maxX, maxY; // バウンディングボックス
+//     std::vector<unsigned char> beforeData; // RLE圧縮された前の状態
+//     std::vector<unsigned char> afterData;  // RLE圧縮された後の状態
+// };
+
+// アンドゥスタックエントリをクラスに書き換え
+class UndoStackEntry {
+public:
+    // コンストラクタ
+    UndoStackEntry() : fileOffset(0), dataSize(0), isValid(false) {}
+    UndoStackEntry(long offset, size_t size) : fileOffset(offset), dataSize(size), isValid(true) {}
+
+    // ゲッター関数
+    long getFileOffset() const { return fileOffset; }
+    size_t getDataSize() const { return dataSize; }
+    bool getIsValid() const { return isValid; }
+
+    // セッター関数
+    void setIsValid(bool valid) { isValid = valid; }
+    void setFileOffset(long offset) { fileOffset = offset; }
+    void setDataSize(size_t size) { dataSize = size; }
+
+private:
     long fileOffset;    // ファイル内でのオフセット
     size_t dataSize;    // データのサイズ
     bool isValid;       // エントリが有効かどうか
-    
-    UndoStackEntry() : fileOffset(0), dataSize(0), isValid(false) {}
-    UndoStackEntry(long offset, size_t size) : fileOffset(offset), dataSize(size), isValid(true) {}
 };
 
-// バックグラウンド処理用のタスク
-struct UndoTask {
+// バックグラウンド処理用のタスクをクラスに書き換え
+class UndoTask {
+public:
     enum Type { SAVE_DIFF, APPLY_UNDO, APPLY_REDO };
     Type type;
     ImageDiff diff;
