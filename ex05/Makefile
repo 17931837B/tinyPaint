@@ -1,7 +1,7 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++11 -pedantic -Wno-missing-field-initializers
 LDFLAGS = -lglfw -lGLEW -lGL -lGLU
-INFILES = 	main.cpp ImageData.cpp paint.cpp
+INFILES = 	main.cpp ImageData.cpp paint.cpp UndoSystem.cpp
 
 OBJFILES = $(INFILES:.cpp=.o)
 

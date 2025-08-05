@@ -15,7 +15,7 @@ int main(void)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE); 
-	window = glfwCreateWindow(800, 600, "TinyPaint ex04", NULL, NULL); 
+	window = glfwCreateWindow(800, 600, "TinyPaint ex05", NULL, NULL); 
 	if (!window)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;
@@ -58,6 +58,9 @@ int main(void)
 	std::cout << "Current brush size: " << brushSize << "px" << std::endl;
 	std::cout << "=== Drawing ===" << std::endl;
 	std::cout << "Left mouse drag: Draw" << std::endl;
+	std::cout << "=== Undo/Redo ===" << std::endl;
+	std::cout << "Ctrl+Z: Undo" << std::endl;
+	std::cout << "Ctrl+Shift+Z or Ctrl+Y: Redo" << std::endl;
 	std::cout << "=== Save ===" << std::endl;
 	std::cout << "S: Save image to PNG file" << std::endl;
 	
@@ -67,6 +70,10 @@ int main(void)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+	
+	// クリーンアップ
+	cleanupUndoSystem(); // アンドゥシステムのクリーンアップ
+	
 	if (globalImg)
 	{
 		delete globalImg;

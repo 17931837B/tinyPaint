@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include "ImageData.hpp"
 #include "stb_image_write.h"
+#include "UndoSystem.hpp"
 
 #define CIRCLE_SEGMENTS 16
 #define NUM_BRUSH_SIZES 7

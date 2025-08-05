@@ -141,6 +141,12 @@ void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /
 			isDragging = true;
 			glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
 			screenToTexture(lastMouseX, lastMouseY, texX, texY);
+			
+			// アンドゥシステム: ストローク開始
+			if (g_undoSystem) {
+				g_undoSystem->beginStroke();
+			}
+			
 			if (texX >= 0 && texX < globalImg->getWidth() && texY >= 0 && texY < globalImg->getHeight())
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, fboId);
@@ -154,10 +160,22 @@ void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 				framebuffer_size_callback(window, windowWidth, windowHeight);
+				
+				// アンドゥシステム: ストローク更新
+				if (g_undoSystem) {
+					g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f);
+				}
 			}
 		}
 		else if (action == GLFW_RELEASE)
+		{
 			isDragging = false;
+			
+			// アンドゥシステム: ストローク終了
+			if (g_undoSystem) {
+				g_undoSystem->endStroke();
+			}
+		}
 	}
 }
 
@@ -184,13 +202,18 @@ void	cursor_position_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 			int windowWidth, windowHeight;
 			glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 			framebuffer_size_callback(window, windowWidth, windowHeight);
+			
+			// アンドゥシステム: ストローク更新
+			if (g_undoSystem) {
+				g_undoSystem->updateStroke(texX2, texY2, brushSize / 2.0f);
+			}
 		}
 		lastMouseX = xpos;
 		lastMouseY = ypos;
 	}
 }
 
-void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
+void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int mods)
 {
 	if (action == GLFW_PRESS)
 	{
@@ -273,6 +296,56 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
 				std::cout << "Brush size: " << brushSize << "px (largest)" << std::endl;
 				break ;
+			// アンドゥ・リドゥ機能
+			case GLFW_KEY_Z:
+				if (mods & GLFW_MOD_CONTROL)
+				{
+					if (mods & GLFW_MOD_SHIFT)
+					{
+						// Ctrl+Shift+Z = Redo
+						if (g_undoSystem && g_undoSystem->canRedo())
+						{
+							g_undoSystem->redo();
+							std::cout << "Redo executed. Undo levels: " << g_undoSystem->getUndoCount() 
+									  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
+						}
+						else
+						{
+							std::cout << "Cannot redo." << std::endl;
+						}
+					}
+					else
+					{
+						// Ctrl+Z = Undo
+						if (g_undoSystem && g_undoSystem->canUndo())
+						{
+							g_undoSystem->undo();
+							std::cout << "Undo executed. Undo levels: " << g_undoSystem->getUndoCount() 
+									  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
+						}
+						else
+						{
+							std::cout << "Cannot undo." << std::endl;
+						}
+					}
+				}
+				break ;
+			case GLFW_KEY_Y:
+				if (mods & GLFW_MOD_CONTROL)
+				{
+					// Ctrl+Y = Redo (alternative)
+					if (g_undoSystem && g_undoSystem->canRedo())
+					{
+						g_undoSystem->redo();
+						std::cout << "Redo executed. Undo levels: " << g_undoSystem->getUndoCount() 
+								  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
+					}
+					else
+					{
+						std::cout << "Cannot redo." << std::endl;
+					}
+				}
+				break ;
 		}
 	}
 }
@@ -311,6 +384,12 @@ void LoadTexture()
 	glfwGetFramebufferSize(window, &width, &height); 
 	glViewport(0, 0, width, height);
 	glClearColor(1.0f, 0.9f, 0.9f, 1.0f);
+	
+	// アンドゥシステムを初期化
+	if (!initializeUndoSystem(globalImg->getWidth(), globalImg->getHeight()))
+	{
+		std::cerr << "Failed to initialize undo system!" << std::endl;
+	}
 }
 
 void	display() 
