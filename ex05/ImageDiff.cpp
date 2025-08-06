@@ -53,43 +53,51 @@ void	ImageDiff::setAfterData(const std::vector<unsigned char>& data)
 	this->_afterData = data;
 }
 
-std::vector<unsigned char> ImageDiff::compressRLE(const unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY) {
-    std::vector<unsigned char> compressed;
-    
-    for (int y = startY; y <= endY; y++) {
-        for (int x = startX; x <= endX; ) {
-            int pixelIndex = (y * width + x) * 4;
-            unsigned char r = data[pixelIndex];
-            unsigned char g = data[pixelIndex + 1];
-            unsigned char b = data[pixelIndex + 2];
-            unsigned char a = data[pixelIndex + 3];
-            
-            // 同じ色が続く長さを数える
-            int runLength = 1;
-            int nextX = x + 1;
-            while (nextX <= endX && runLength < 255) {
-                int nextIndex = (y * width + nextX) * 4;
-                if (data[nextIndex] == r && data[nextIndex + 1] == g && 
-                    data[nextIndex + 2] == b && data[nextIndex + 3] == a) {
-                    runLength++;
-                    nextX++;
-                } else {
-                    break;
-                }
-            }
-            
-            // RLEデータを追加
-            compressed.push_back(runLength);
-            compressed.push_back(r);
-            compressed.push_back(g);
-            compressed.push_back(b);
-            compressed.push_back(a);
-            
-            x += runLength;
-        }
-    }
-    
-    return compressed;
+std::vector<unsigned char> ImageDiff::compressRLE(const unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
+{
+	int							pixelIndex;
+	std::vector<unsigned char>	compressed;
+	unsigned char				r, g, b, a;
+	int							x, y;
+	int							runLength;
+	int							nextX;
+	int							nextIndex;
+
+	y = startY;
+	while (y <= endY)
+	{
+		x = startX;
+		while (x <= endX)
+		{
+			pixelIndex = (y * width + x) * 4;
+			r = data[pixelIndex];
+			g = data[pixelIndex + 1];
+			b = data[pixelIndex + 2];
+			a = data[pixelIndex + 3];
+			runLength = 1;
+			nextX = x + 1;
+			while (nextX <= endX && runLength < 255)
+			{
+				nextIndex = (y * width + nextX) * 4;
+				if (data[nextIndex] == r && data[nextIndex + 1] == g &&
+					data[nextIndex + 2] == b && data[nextIndex + 3] == a)
+					{
+						runLength++;
+						nextX++;
+					}
+					else
+						break ;
+			}
+			compressed.push_back(runLength);
+			compressed.push_back(r);
+			compressed.push_back(g);
+			compressed.push_back(b);
+			compressed.push_back(a);
+			x += runLength;
+		}
+		y++;
+	}
+	return (compressed);
 }
 
 void ImageDiff::decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY) {
