@@ -53,12 +53,13 @@ void	ImageDiff::setAfterData(const std::vector<unsigned char>& data)
 	this->_afterData = data;
 }
 
-std::vector<unsigned char> ImageDiff::compressRLE(const unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
+std::vector<unsigned char>	ImageDiff::compressRLE(const unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
 {
-	int							pixelIndex;
 	std::vector<unsigned char>	compressed;
+	int							y;
+	int							x;
+	int							pixelIndex;
 	unsigned char				r, g, b, a;
-	int							x, y;
 	int							runLength;
 	int							nextX;
 	int							nextIndex;
@@ -79,14 +80,14 @@ std::vector<unsigned char> ImageDiff::compressRLE(const unsigned char* data, int
 			while (nextX <= endX && runLength < 255)
 			{
 				nextIndex = (y * width + nextX) * 4;
-				if (data[nextIndex] == r && data[nextIndex + 1] == g &&
+				if (data[nextIndex] == r && data[nextIndex + 1] == g && 
 					data[nextIndex + 2] == b && data[nextIndex + 3] == a)
-					{
-						runLength++;
-						nextX++;
-					}
-					else
-						break ;
+				{
+					runLength++;
+					nextX++;
+				}
+				else
+					break;
 			}
 			compressed.push_back(runLength);
 			compressed.push_back(r);
@@ -97,79 +98,89 @@ std::vector<unsigned char> ImageDiff::compressRLE(const unsigned char* data, int
 		}
 		y++;
 	}
+	
 	return (compressed);
 }
 
-void ImageDiff::decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY) {
-    size_t compressedIndex = 0;
-    int x = startX;
-    int y = startY;
-    
-    while (compressedIndex < compressed.size() && y <= endY) {
-        unsigned char runLength = compressed[compressedIndex++];
-        unsigned char r = compressed[compressedIndex++];
-        unsigned char g = compressed[compressedIndex++];
-        unsigned char b = compressed[compressedIndex++];
-        unsigned char a = compressed[compressedIndex++];
-        
-        for (int i = 0; i < runLength && y <= endY; i++) {
-            if (x > endX) {
-                x = startX;
-                y++;
-                if (y > endY) break;
-            }
-            
-            int pixelIndex = (y * width + x) * 4;
-            data[pixelIndex] = r;
-            data[pixelIndex + 1] = g;
-            data[pixelIndex + 2] = b;
-            data[pixelIndex + 3] = a;
-            x++;
-        }
-    }
+// 修正されたdecompressRLE関数
+void	ImageDiff::decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
+{
+	size_t			compressedIndex;
+	int				y;
+	int				x;
+	unsigned char	runLength;
+	unsigned char	r, g, b, a;
+	int				i;
+	int				pixelIndex;
+
+	compressedIndex = 0;
+	y = startY;
+	while (y <= endY && compressedIndex < compressed.size())
+	{
+		x = startX;
+		while (x <= endX && compressedIndex < compressed.size())
+		{
+			runLength = compressed[compressedIndex++];
+			r = compressed[compressedIndex++];
+			g = compressed[compressedIndex++];
+			b = compressed[compressedIndex++];
+			a = compressed[compressedIndex++];
+			i = 0;
+			while (i < runLength && x <= endX)
+			{
+				pixelIndex = (y * width + x) * 4;
+				data[pixelIndex] = r;
+				data[pixelIndex + 1] = g;
+				data[pixelIndex + 2] = b;
+				data[pixelIndex + 3] = a;
+				i++;
+				x++;
+			}
+		}
+		y++;
+	}
 }
 
-void ImageDiff::serialize(std::ofstream& file) const {
-    file.write(reinterpret_cast<const char*>(&_minX), sizeof(_minX));
-    file.write(reinterpret_cast<const char*>(&_minY), sizeof(_minY));
-    file.write(reinterpret_cast<const char*>(&_maxX), sizeof(_maxX));
-    file.write(reinterpret_cast<const char*>(&_maxY), sizeof(_maxY));
-    
-    size_t beforeSize = _beforeData.size();
-    size_t afterSize = _afterData.size();
-    file.write(reinterpret_cast<const char*>(&beforeSize), sizeof(beforeSize));
-    file.write(reinterpret_cast<const char*>(&afterSize), sizeof(afterSize));
-    
-    if (beforeSize > 0) {
-        file.write(reinterpret_cast<const char*>(_beforeData.data()), beforeSize);
-    }
-    if (afterSize > 0) {
-        file.write(reinterpret_cast<const char*>(_afterData.data()), afterSize);
-    }
+void	ImageDiff::serialize(std::ofstream& file) const
+{
+	size_t	beforeSize;
+	size_t	afterSize;
+
+	file.write(reinterpret_cast<const char*>(&_minX), sizeof(_minX));
+	file.write(reinterpret_cast<const char*>(&_minY), sizeof(_minY));
+	file.write(reinterpret_cast<const char*>(&_maxX), sizeof(_maxX));
+	file.write(reinterpret_cast<const char*>(&_maxY), sizeof(_maxY));
+	beforeSize = _beforeData.size();
+	afterSize = _afterData.size();
+	file.write(reinterpret_cast<const char*>(&beforeSize), sizeof(beforeSize));
+	file.write(reinterpret_cast<const char*>(&afterSize), sizeof(afterSize));
+	if (beforeSize > 0)
+		file.write(reinterpret_cast<const char*>(_beforeData.data()), beforeSize);
+	if (afterSize > 0)
+		file.write(reinterpret_cast<const char*>(_afterData.data()), afterSize);
 }
 
-void ImageDiff::deserialize(std::ifstream& file) {
-    file.read(reinterpret_cast<char*>(&_minX), sizeof(_minX));
-    file.read(reinterpret_cast<char*>(&_minY), sizeof(_minY));
-    file.read(reinterpret_cast<char*>(&_maxX), sizeof(_maxX));
-    file.read(reinterpret_cast<char*>(&_maxY), sizeof(_maxY));
-    
-    size_t beforeSize, afterSize;
-    file.read(reinterpret_cast<char*>(&beforeSize), sizeof(beforeSize));
-    file.read(reinterpret_cast<char*>(&afterSize), sizeof(afterSize));
-    
-    _beforeData.resize(beforeSize);
-    _afterData.resize(afterSize);
-    
-    if (beforeSize > 0) {
-        file.read(reinterpret_cast<char*>(_beforeData.data()), beforeSize);
-    }
-    if (afterSize > 0) {
-        file.read(reinterpret_cast<char*>(_afterData.data()), afterSize);
-    }
+void	ImageDiff::deserialize(std::ifstream& file)
+{
+	size_t	beforeSize;
+	size_t	afterSize;
+
+	file.read(reinterpret_cast<char*>(&_minX), sizeof(_minX));
+	file.read(reinterpret_cast<char*>(&_minY), sizeof(_minY));
+	file.read(reinterpret_cast<char*>(&_maxX), sizeof(_maxX));
+	file.read(reinterpret_cast<char*>(&_maxY), sizeof(_maxY));
+	file.read(reinterpret_cast<char*>(&beforeSize), sizeof(beforeSize));
+	file.read(reinterpret_cast<char*>(&afterSize), sizeof(afterSize));
+	_beforeData.resize(beforeSize);
+	_afterData.resize(afterSize);
+	if (beforeSize > 0)
+		file.read(reinterpret_cast<char*>(_beforeData.data()), beforeSize);
+	if (afterSize > 0)
+		file.read(reinterpret_cast<char*>(_afterData.data()), afterSize);
 }
 
-size_t ImageDiff::getSerializedSize() const {
-    return sizeof(_minX) + sizeof(_minY) + sizeof(_maxX) + sizeof(_maxY) +
-           sizeof(size_t) * 2 + _beforeData.size() + _afterData.size();
+size_t ImageDiff::getSerializedSize() const
+{
+	return (sizeof(_minX) + sizeof(_minY) + sizeof(_maxX) + sizeof(_maxY) +
+			sizeof(size_t) * 2 + _beforeData.size() + _afterData.size());
 }
