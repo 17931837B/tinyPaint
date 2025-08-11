@@ -12,6 +12,7 @@ double		lastMouseY = 0.0;
 float		brushSize = 30.0f;
 int currentBrushSizeIndex = 3;
 
+// ウィンドウサイズが変更されたときに呼び出され、描画領域とアスペクト比を適切に調整する
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
 	float	textureAspect;
@@ -19,13 +20,11 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoWidth = 1.0f;
 	float	orthoHeight = 1.0f;
 
-	// std::cout << "Window resized to: " << width << "x" << height << std::endl;
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	// std::cout << "Window aspect: " << windowAspect << ", Texture aspect: " << textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -39,7 +38,6 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	// std::cout << "Ortho bounds: (" << -orthoWidth << ", " << -orthoHeight << ") to (" << orthoWidth << ", " << orthoHeight << ")" << std::endl;
 }
 
 void screenToTexture(double screenX, double screenY, float& texX, float& texY)
