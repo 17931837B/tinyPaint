@@ -141,8 +141,10 @@ void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /
 			screenToTexture(lastMouseX, lastMouseY, texX, texY);
 			
 			// アンドゥシステム: ストローク開始
-			if (g_undoSystem) {
+			if (g_undoSystem)
+			{
 				g_undoSystem->beginStroke();
+				g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f); //素早いブラシ対応
 			}
 			
 			if (texX >= 0 && texX < globalImg->getWidth() && texY >= 0 && texY < globalImg->getHeight())
