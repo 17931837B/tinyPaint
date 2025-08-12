@@ -35,19 +35,20 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 		orthoWidth = 1.0f;
 		orthoHeight = textureAspect / windowAspect;
 	}
-	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
+	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight); //投影行列採用
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
 
-void screenToTexture(double screenX, double screenY, float& texX, float& texY)
+// スクリーン座標を描写計算座標に変換
+void	screenToTexture(double screenX, double screenY, float& texX, float& texY)
 {
-	int	windowWidth, windowHeight;
+	int		windowWidth, windowHeight;
 	float	textureAspect;
 	float	windowAspect;
-	float drawAreaX, drawAreaY, drawAreaWidth, drawAreaHeight;
-	float relativeX;
-	float relativeY;
+	float	drawAreaX, drawAreaY, drawAreaWidth, drawAreaHeight;
+	float	relativeX;
+	float	relativeY;
 
 	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
@@ -69,11 +70,10 @@ void screenToTexture(double screenX, double screenY, float& texX, float& texY)
 	//正規化
 	relativeX = (screenX - drawAreaX) / drawAreaWidth;
 	relativeY = (screenY - drawAreaY) / drawAreaHeight;
-	// テクスチャ座標に変換
+	//OpenGL座標に変換
+	//GLFWでマウス座標を取得すると左上が原点である。一方、OpenGLでは左下が原点である。
 	texX = relativeX * globalImg->getWidth();
 	texY = (1.0f - relativeY) * globalImg->getHeight(); // Y軸反転
-	// std::cout << "Screen(" << screenX << "," << screenY << ") -> Texture(" << texX << "," << texY << ")" << std::endl;
-	// std::cout << "Draw area: (" << drawAreaX << "," << drawAreaY << ") size(" << drawAreaWidth << "x" << drawAreaHeight << ")" << std::endl;
 }
 
 // 円の描写
@@ -84,7 +84,8 @@ void	drawCircle(float centerX, float centerY, float radius)
 
 	glBegin(GL_TRIANGLE_FAN);
 	glColor4f(currentBrushColor.r, currentBrushColor.g, currentBrushColor.b, currentBrushColor.a);
-	glVertex2f(centerX, centerY);
+	glVertex2f(centerX, centerY); //中心点の設定
+	// 16角形の近似円を描写
 	i = 0;
 	while (i <= CIRCLE_SEGMENTS)
 	{
@@ -110,11 +111,13 @@ void	drawLine(float x1, float y1, float x2, float y2)
 	dx = x2 - x1;
 	dy = y2 - y1;
 	distance = sqrt(dx * dx + dy * dy);
+	// 点の場合
 	if (distance < 1.0f)
 	{
 		drawCircle(x2, y2, brushSize / 2.0f);
 		return ;
 	}
+	// ブラシの太さに応じて円の数を調整
 	steps = (int)(distance / (brushSize * 0.2f)) + 1;
 	i = 0;
 	while (i <= steps)
