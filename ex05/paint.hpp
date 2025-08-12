@@ -46,5 +46,6 @@ void	otherInit(void);
 void	LoadTexture();
 void	display();
 void	saveImage();
+void	saveImageXPM();
 
 #endif

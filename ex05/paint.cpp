@@ -228,6 +228,10 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 			case GLFW_KEY_S:
 				saveImage();
 				break;
+			case GLFW_KEY_X:
+				saveImageXPM();
+				std::cout << "XPM export completed!" << std::endl;
+				break;
 			case GLFW_KEY_0:
 				currentBrushColor = {1.0f, 1.0f, 1.0f, 1.0f};
 				std::cout << "Brush color: White (Eraser - overwrites with background)" << std::endl;
@@ -463,6 +467,205 @@ void saveImage()
 		std::cout << "Image saved as: " << filename << std::endl;
 	else
 		std::cerr << "Failed to save PNG image!" << std::endl;
+	delete[] pixels;
+	delete[] flippedPixels;
+}
+
+void saveImageXPM()
+{
+	int width;
+	int height;
+	unsigned char* pixels;
+	unsigned char* flippedPixels;
+	int srcIndex;
+	int dstIndex;
+	time_t now;
+	struct tm* timeinfo;
+	char filename[256];
+	std::string filepath;
+	int x, y;
+	
+	width = globalImg->getWidth();
+	height = globalImg->getHeight();
+	pixels = new unsigned char[width * height * 4];
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
+	flippedPixels = new unsigned char[width * height * 4];
+	
+	// y軸反転
+	y = 0;
+	while (y < height)
+	{
+		x = 0;
+		while (x < width)
+		{
+			srcIndex = ((height - 1 - y) * width + x) * 4;
+			dstIndex = (y * width + x) * 4;
+			flippedPixels[dstIndex + 0] = pixels[srcIndex + 0];
+			flippedPixels[dstIndex + 1] = pixels[srcIndex + 1];
+			flippedPixels[dstIndex + 2] = pixels[srcIndex + 2];
+			flippedPixels[dstIndex + 3] = pixels[srcIndex + 3];
+			x++;
+		}
+		y++;
+	}
+	
+	// XPMファイル名を生成
+	now = time(0);
+	timeinfo = localtime(&now);
+	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d%H%M%S.xpm", timeinfo);
+	
+	// outputディレクトリを作成
+	struct stat st = {0};
+	if (stat("output", &st) == -1)
+		mkdir("output", 0700);
+		
+	filepath = "output/" + std::string(filename);
+	
+	// XPMファイルに書き込み
+	std::ofstream file(filepath);
+	if (!file.is_open()) 
+	{
+		std::cerr << "Failed to open XPM file for writing!" << std::endl;
+		delete[] pixels;
+		delete[] flippedPixels;
+		return;
+	}
+	
+	// ユニークな色を収集と文字の割り当てを同時に実行
+	std::map<std::string, char> colorMap;
+	std::vector<std::string> colorList;
+	const char* colorChars = " .XoO+@#$%&*=-;:>,<1234567890qwertyuiop[]asdfghjklzxcvbnmQWERTYUIOP{}ASDFGHJKLZXCVBNM!?";
+	int colorIndex = 0;
+	
+	std::cout << "色を収集中..." << std::endl;
+	y = 0;
+	while (y < height && colorIndex < 94) 
+	{
+		x = 0;
+		while (x < width && colorIndex < 94) 
+		{
+			int pixelIndex = (y * width + x) * 4;
+			
+			// RGB値を16進数文字列に変換
+			std::stringstream ss;
+			ss << "#" << std::hex << std::uppercase << std::setfill('0') 
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 1] 
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 2];
+			std::string colorStr = ss.str();
+			
+			// 新しい色の場合のみ追加
+			if (colorMap.find(colorStr) == colorMap.end()) 
+			{
+				colorMap[colorStr] = colorChars[colorIndex];
+				colorList.push_back(colorStr);
+				colorIndex++;
+			}
+			x++;
+		}
+		y++;
+	}
+	
+	// まだ全ピクセルをチェックできていない場合、残りをスキャン
+	if (colorIndex < 94)
+	{
+		while (y < height)
+		{
+			x = 0;
+			while (x < width && colorIndex < 94)
+			{
+				int pixelIndex = (y * width + x) * 4;
+				
+				std::stringstream ss;
+				ss << "#" << std::hex << std::uppercase << std::setfill('0') 
+				   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
+				   << std::setw(2) << (int)flippedPixels[pixelIndex + 1] 
+				   << std::setw(2) << (int)flippedPixels[pixelIndex + 2];
+				std::string colorStr = ss.str();
+				
+				if (colorMap.find(colorStr) == colorMap.end()) 
+				{
+					colorMap[colorStr] = colorChars[colorIndex];
+					colorList.push_back(colorStr);
+					colorIndex++;
+				}
+				x++;
+			}
+			y++;
+		}
+	}
+	
+	std::cout << "発見された色数: " << colorList.size() << std::endl;
+	
+	// XPMファイルを書き出し
+	file << "/* XPM */" << std::endl;
+	file << "static char * tinyPaint_xpm[] = {" << std::endl;
+	
+	// ヘッダー行: 幅 高さ 色数 1文字per pixel
+	file << "\"" << width << " " << height << " " << colorList.size() << " 1\"," << std::endl;
+	
+	// カラーパレット定義
+	size_t i = 0;
+	while (i < colorList.size()) 
+	{
+		char colorChar = colorMap[colorList[i]];
+		file << "\"" << colorChar << " c " << colorList[i] << "\"";
+		if (i < colorList.size() - 1 || height > 0) file << ",";
+		file << std::endl;
+		i++;
+	}
+	
+	// ピクセルデータ
+	std::cout << "ピクセルデータを書き出し中..." << std::endl;
+	y = 0;
+	while (y < height) 
+	{
+		file << "\"";
+		x = 0;
+		while (x < width) 
+		{
+			int pixelIndex = (y * width + x) * 4;
+			
+			// RGB値を16進数文字列に変換
+			std::stringstream ss;
+			ss << "#" << std::hex << std::uppercase << std::setfill('0') 
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 1] 
+			   << std::setw(2) << (int)flippedPixels[pixelIndex + 2];
+			std::string colorStr = ss.str();
+			
+			// 対応する文字を出力
+			if (colorMap.find(colorStr) != colorMap.end()) {
+				file << colorMap[colorStr];
+			} else {
+				// colorMapに存在しない色の場合、最初の色（通常は背景色）を使用
+				file << colorChars[0];
+			}
+			x++;
+		}
+		file << "\"";
+		if (y < height - 1) file << ",";
+		file << std::endl;
+		
+		// 進捗表示（大きな画像の場合）
+		if (height > 1000 && y % (height / 10) == 0) {
+			std::cout << "進捗: " << (y * 100 / height) << "%" << std::endl;
+		}
+		y++;
+	}
+	
+	file << "};" << std::endl;
+	file.close();
+	
+	if (file.good())
+		std::cout << "XPM画像が保存されました: " << filename << std::endl;
+	else
+		std::cerr << "XPM画像の保存に失敗しました!" << std::endl;
+	
 	delete[] pixels;
 	delete[] flippedPixels;
 }
