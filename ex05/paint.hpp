@@ -10,6 +10,10 @@
 #include <string>
 #include <ctime>
 #include <sys/stat.h>
+#include <fstream>
+#include <map>
+#include <iomanip>
+#include <sstream>
 #include "ImageData.hpp"
 #include "stb_image_write.h"
 #include "UndoSystem.hpp"

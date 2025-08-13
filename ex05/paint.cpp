@@ -10,7 +10,29 @@ bool		isDragging = false;
 double		lastMouseX = 0.0;
 double		lastMouseY = 0.0;
 float		brushSize = 30.0f;
-int currentBrushSizeIndex = 3;
+int			currentBrushSizeIndex = 3;
+
+// 描画用のビューポートとプロジェクション設定を一箇所にまとめる
+void	setupDrawingViewport()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0, globalImg->getWidth(), 0, globalImg->getHeight());
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+// 表示用のビューポートとプロジェクション設定を復元
+void	restoreDisplayViewport()
+{
+	int	windowWidth, windowHeight;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+	framebuffer_size_callback(window, windowWidth, windowHeight);
+}
 
 // ウィンドウサイズが変更されたときに呼び出され、描画領域とアスペクト比を適切に調整する
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
@@ -35,7 +57,7 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 		orthoWidth = 1.0f;
 		orthoHeight = textureAspect / windowAspect;
 	}
-	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight); //投影行列採用
+	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -67,13 +89,18 @@ void	screenToTexture(double screenX, double screenY, float& texX, float& texY)
 		drawAreaX = 0.0f;
 		drawAreaY = ((float)windowHeight - drawAreaHeight) * 0.5f;
 	}
-	//正規化
+	// 正規化
 	relativeX = (screenX - drawAreaX) / drawAreaWidth;
 	relativeY = (screenY - drawAreaY) / drawAreaHeight;
-	//OpenGL座標に変換
-	//GLFWでマウス座標を取得すると左上が原点である。一方、OpenGLでは左下が原点である。
+	// OpenGL座標に変換
 	texX = relativeX * globalImg->getWidth();
 	texY = (1.0f - relativeY) * globalImg->getHeight(); // Y軸反転
+}
+
+// 範囲チェック関数
+bool	isInBounds(float texX, float texY)
+{
+	return (texX >= 0 && texX < globalImg->getWidth() && texY >= 0 && texY < globalImg->getHeight());
 }
 
 // 円の描写
@@ -84,7 +111,7 @@ void	drawCircle(float centerX, float centerY, float radius)
 
 	glBegin(GL_TRIANGLE_FAN);
 	glColor4f(currentBrushColor.r, currentBrushColor.g, currentBrushColor.b, currentBrushColor.a);
-	glVertex2f(centerX, centerY); //中心点の設定
+	glVertex2f(centerX, centerY);
 	// 16角形の近似円を描写
 	i = 0;
 	while (i <= CIRCLE_SEGMENTS)
@@ -111,12 +138,6 @@ void	drawLine(float x1, float y1, float x2, float y2)
 	dx = x2 - x1;
 	dy = y2 - y1;
 	distance = sqrt(dx * dx + dy * dy);
-	// 点の場合
-	if (distance < 1.0f)
-	{
-		drawCircle(x2, y2, brushSize / 2.0f);
-		return ;
-	}
 	// ブラシの太さに応じて円の数を調整
 	steps = (int)(distance / (brushSize * 0.2f)) + 1;
 	i = 0;
@@ -130,10 +151,32 @@ void	drawLine(float x1, float y1, float x2, float y2)
 	}
 }
 
+// 点の描写処理
+void	performDraw(float texX, float texY)
+{
+	if (isInBounds(texX, texY))
+	{
+		setupDrawingViewport();
+		drawCircle(texX, texY, brushSize / 2.0f);
+		restoreDisplayViewport();
+	}
+}
+
+// 線の描写処理
+void	performDrawLine(float texX1, float texY1, float texX2, float texY2)
+{
+	if (isInBounds(texX1, texY1) && isInBounds(texX2, texY2))
+	{
+		setupDrawingViewport();
+		drawLine(texX1, texY1, texX2, texY2);
+		restoreDisplayViewport();
+	}
+}
+
+// マウスボタン操作のコールバック関数
 void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /*mods*/)
 {
 	float	texX, texY;
-	int		windowWidth, windowHeight;
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
@@ -142,80 +185,84 @@ void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /
 			isDragging = true;
 			glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
 			screenToTexture(lastMouseX, lastMouseY, texX, texY);
-			
-			// アンドゥシステム: ストローク開始
 			if (g_undoSystem)
 			{
 				g_undoSystem->beginStroke();
-				g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f); //素早いブラシ対応
+				g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f);
 			}
-			
-			if (texX >= 0 && texX < globalImg->getWidth() && texY >= 0 && texY < globalImg->getHeight())
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-				glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
-				glMatrixMode(GL_PROJECTION);
-				glLoadIdentity();
-				gluOrtho2D(0, globalImg->getWidth(), 0, globalImg->getHeight());
-				glMatrixMode(GL_MODELVIEW);
-				glLoadIdentity();
-				drawCircle(texX, texY, brushSize / 2.0f);
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
-				framebuffer_size_callback(window, windowWidth, windowHeight);
-				
-				// アンドゥシステム: ストローク更新
-				if (g_undoSystem) {
-					g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f);
-				}
-			}
+			performDraw(texX, texY);
+			if (g_undoSystem)
+				g_undoSystem->updateStroke(texX, texY, brushSize / 2.0f);
 		}
 		else if (action == GLFW_RELEASE)
 		{
 			isDragging = false;
-			
-			// アンドゥシステム: ストローク終了
-			if (g_undoSystem) {
+			if (g_undoSystem)
 				g_undoSystem->endStroke();
-			}
 		}
 	}
 }
 
+// カーソル移動のコールバック関数
 void	cursor_position_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 {
-	float texX1, texY1, texX2, texY2;
+	float	texX1, texY1, texX2, texY2;
 
 	if (isDragging)
 	{
 		screenToTexture(lastMouseX, lastMouseY, texX1, texY1);
 		screenToTexture(xpos, ypos, texX2, texY2);
-		if (texX1 >= 0 && texX1 < globalImg->getWidth() && texY1 >= 0 && texY1 < globalImg->getHeight() &&
-			texX2 >= 0 && texX2 < globalImg->getWidth() && texY2 >= 0 && texY2 < globalImg->getHeight())
-		{
-			glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-			glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluOrtho2D(0, globalImg->getWidth(), 0, globalImg->getHeight());
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-			drawLine(texX1, texY1, texX2, texY2);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			int windowWidth, windowHeight;
-			glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
-			framebuffer_size_callback(window, windowWidth, windowHeight);
-			
-			// アンドゥシステム: ストローク更新
-			if (g_undoSystem) {
-				g_undoSystem->updateStroke(texX2, texY2, brushSize / 2.0f);
-			}
-		}
+		performDrawLine(texX1, texY1, texX2, texY2);
+		if (g_undoSystem)
+			g_undoSystem->updateStroke(texX2, texY2, brushSize / 2.0f);
 		lastMouseX = xpos;
 		lastMouseY = ypos;
 	}
 }
 
+// ブラシサイズ変更
+void	setBrushSize(int index)
+{
+	if (index >= 0 && index < NUM_BRUSH_SIZES)
+	{
+		currentBrushSizeIndex = index;
+		brushSize = BRUSH_SIZES[index];
+		std::cout << "Brush size: " << brushSize << "px" << std::endl;
+	}
+}
+
+// ブラシ色設定
+void	setBrushColor(float r, float g, float b, float a, const std::string& colorName)
+{
+	currentBrushColor = {r, g, b, a};
+	std::cout << "Brush color: " << colorName << std::endl;
+}
+
+// Undo処理
+void	performUndo()
+{
+	if (g_undoSystem && g_undoSystem->canUndo())
+	{
+		g_undoSystem->undo();
+		std::cout << "Undo layer: " << g_undoSystem->getUndoCount() << ", Redo layer: " << g_undoSystem->getRedoCount() << std::endl;
+	}
+	else
+		std::cout << "Cannot undo." << std::endl;
+}
+
+// Redo処理
+void	performRedo()
+{
+	if (g_undoSystem && g_undoSystem->canRedo())
+	{
+		g_undoSystem->redo();
+		std::cout << "Undo layer: " << g_undoSystem->getUndoCount() << ", Redo layer: " << g_undoSystem->getRedoCount() << std::endl;
+	}
+	else
+		std::cout << "Cannot redo." << std::endl;
+}
+
+// キーの入出力コールバック関数
 void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int mods)
 {
 	if (action == GLFW_PRESS)
@@ -233,126 +280,62 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 				std::cout << "XPM export completed!" << std::endl;
 				break;
 			case GLFW_KEY_0:
-				currentBrushColor = {1.0f, 1.0f, 1.0f, 1.0f};
-				std::cout << "Brush color: White (Eraser - overwrites with background)" << std::endl;
-				break ;
+				setBrushColor(1.0f, 1.0f, 1.0f, 1.0f, "White (Eraser)");
+				break;
 			case GLFW_KEY_1:
-				currentBrushColor = {0.0f, 0.0f, 0.0f, 1.0f};
-				std::cout << "Brush color: Black" << std::endl;
-				break ;
+				setBrushColor(0.0f, 0.0f, 0.0f, 1.0f, "Black");
+				break;
 			case GLFW_KEY_R:
-				currentBrushColor = {1.0f, 0.0f, 0.0f, 1.0f};
-				std::cout << "Brush color: Red" << std::endl;
-				break ;
+				setBrushColor(1.0f, 0.0f, 0.0f, 1.0f, "Red");
+				break;
 			case GLFW_KEY_G:
-				currentBrushColor = {0.0f, 1.0f, 0.0f, 1.0f};
-				std::cout << "Brush color: Green" << std::endl;
-				break ;
+				setBrushColor(0.0f, 1.0f, 0.0f, 1.0f, "Green");
+				break;
 			case GLFW_KEY_B:
-				currentBrushColor = {0.0f, 0.0f, 1.0f, 1.0f};
-				std::cout << "Brush color: Blue" << std::endl;
-				break ;
+				setBrushColor(0.0f, 0.0f, 1.0f, 1.0f, "Blue");
+				break;
 			case GLFW_KEY_KP_SUBTRACT:
 				if (currentBrushSizeIndex > 0)
-				{
-					currentBrushSizeIndex--;
-					brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-					std::cout << "Brush size: " << brushSize << "px" << std::endl;
-				}
-				break ;
+					setBrushSize(currentBrushSizeIndex - 1);
+				break;
 			case GLFW_KEY_KP_ADD:
 				if (currentBrushSizeIndex < NUM_BRUSH_SIZES - 1)
-				{
-					currentBrushSizeIndex++;
-					brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-					std::cout << "Brush size: " << brushSize << "px" << std::endl;
-				}
-				break ;
+					setBrushSize(currentBrushSizeIndex + 1);
+				break;
 			case GLFW_KEY_2:
-				currentBrushSizeIndex = 0;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (smallest)" << std::endl;
-				break ;
+				setBrushSize(0);
+				break;
 			case GLFW_KEY_3:
-				currentBrushSizeIndex = 1;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (small)" << std::endl;
-				break ;
+				setBrushSize(1);
+				break;
 			case GLFW_KEY_4:
-				currentBrushSizeIndex = 2;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (medium-small)" << std::endl;
-				break ;
+				setBrushSize(2);
+				break;
 			case GLFW_KEY_5:
-				currentBrushSizeIndex = 3;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (medium)" << std::endl;
-				break ;
+				setBrushSize(3);
+				break;
 			case GLFW_KEY_6:
-				currentBrushSizeIndex = 4;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (large)" << std::endl;
-				break ;
+				setBrushSize(4);
+				break;
 			case GLFW_KEY_7:
-				currentBrushSizeIndex = 5;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (very large)" << std::endl;
-				break ;
+				setBrushSize(5);
+				break;
 			case GLFW_KEY_8:
-				currentBrushSizeIndex = 6;
-				brushSize = BRUSH_SIZES[currentBrushSizeIndex];
-				std::cout << "Brush size: " << brushSize << "px (largest)" << std::endl;
-				break ;
-			// アンドゥ・リドゥ機能
+				setBrushSize(6);
+				break;
 			case GLFW_KEY_Z:
 				if (mods & GLFW_MOD_CONTROL)
 				{
 					if (mods & GLFW_MOD_SHIFT)
-					{
-						// Ctrl+Shift+Z = Redo
-						if (g_undoSystem && g_undoSystem->canRedo())
-						{
-							g_undoSystem->redo();
-							std::cout << "Redo executed. Undo levels: " << g_undoSystem->getUndoCount() 
-									  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
-						}
-						else
-						{
-							std::cout << "Cannot redo." << std::endl;
-						}
-					}
+						performRedo(); // Ctrl+Shift+Z
 					else
-					{
-						// Ctrl+Z = Undo
-						if (g_undoSystem && g_undoSystem->canUndo())
-						{
-							g_undoSystem->undo();
-							std::cout << "Undo executed. Undo levels: " << g_undoSystem->getUndoCount() 
-									  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
-						}
-						else
-						{
-							std::cout << "Cannot undo." << std::endl;
-						}
-					}
+						performUndo(); // Ctrl+Z
 				}
-				break ;
+				break;
 			case GLFW_KEY_Y:
 				if (mods & GLFW_MOD_CONTROL)
-				{
-					// Ctrl+Y = Redo (alternative)
-					if (g_undoSystem && g_undoSystem->canRedo())
-					{
-						g_undoSystem->redo();
-						std::cout << "Redo executed. Undo levels: " << g_undoSystem->getUndoCount() 
-								  << ", Redo levels: " << g_undoSystem->getRedoCount() << std::endl;
-					}
-					else
-					{
-						std::cout << "Cannot redo." << std::endl;
-					}
-				}
-				break ;
+					performRedo(); // Ctrl+Y
+				break;
 		}
 	}
 }
@@ -415,38 +398,29 @@ void	display()
 	glDisable(GL_TEXTURE_2D);
 }
 
-//画像保存
-void saveImage()
+// 画像保存用のピクセルデータを取得する共通関数
+unsigned char*	getImagePixels(int& width, int& height)
 {
-	int	width;
-	int	height;
-	unsigned char* pixels;
-	unsigned char* flippedPixels;
-	int srcIndex;
-	int dstIndex;
-	time_t now;
-	struct tm* timeinfo;
-	char filename[256];
-	std::string filepath;
-	int	res;
-	int	x, y;
-
-    struct stat st = {0};
-    if (stat("output", &st) == -1)
-		mkdir("output", 0700);
 	width = globalImg->getWidth();
 	height = globalImg->getHeight();
-	pixels = new unsigned char[width * height * 4];
+	unsigned char* pixels = new unsigned char[width * height * 4];
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	flippedPixels = new unsigned char[width * height * 4];
-	//y軸反転
-	y = 0;
-	while (y < height)
+	
+	return pixels;
+}
+
+// Y軸反転処理を共通化
+unsigned char*	flipImageVertically(unsigned char* pixels, int width, int height)
+{
+	unsigned char* flippedPixels = new unsigned char[width * height * 4];
+	int srcIndex, dstIndex;
+	
+	for (int y = 0; y < height; y++)
 	{
-		x = 0;
-		while (x < width)
+		for (int x = 0; x < width; x++)
 		{
 			srcIndex = ((height - 1 - y) * width + x) * 4;
 			dstIndex = (y * width + x) * 4;
@@ -454,76 +428,56 @@ void saveImage()
 			flippedPixels[dstIndex + 1] = pixels[srcIndex + 1];
 			flippedPixels[dstIndex + 2] = pixels[srcIndex + 2];
 			flippedPixels[dstIndex + 3] = pixels[srcIndex + 3];
-			x++;
 		}
-		y++;
 	}
-	now = time(0);
-	timeinfo = localtime(&now);
-	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d%H%M%S.png", timeinfo);
-	filepath = "output/" + std::string(filename);
-	res = stbi_write_png(filepath.c_str(), width, height, 4, flippedPixels, width * 4);
+	
+	return flippedPixels;
+}
+
+// ファイル名生成を共通化
+std::string	generateFilename(const std::string& extension)
+{
+	time_t now = time(0);
+	struct tm* timeinfo = localtime(&now);
+	char filename[256];
+	std::string format = "tinyPaint_%Y%m%d%H%M%S." + extension;
+	strftime(filename, sizeof(filename), format.c_str(), timeinfo);
+	
+	// outputディレクトリを作成
+	struct stat st = {0};
+	if (stat("output", &st) == -1)
+		mkdir("output", 0700);
+	
+	return "output/" + std::string(filename);
+}
+
+// 画像保存
+void saveImage()
+{
+	int width, height;
+	unsigned char* pixels = getImagePixels(width, height);
+	unsigned char* flippedPixels = flipImageVertically(pixels, width, height);
+	
+	std::string filepath = generateFilename("png");
+	
+	int res = stbi_write_png(filepath.c_str(), width, height, 4, flippedPixels, width * 4);
+	
 	if (res)
-		std::cout << "Image saved as: " << filename << std::endl;
+		std::cout << "Image saved as: " << filepath << std::endl;
 	else
 		std::cerr << "Failed to save PNG image!" << std::endl;
+	
 	delete[] pixels;
 	delete[] flippedPixels;
 }
 
 void saveImageXPM()
 {
-	int width;
-	int height;
-	unsigned char* pixels;
-	unsigned char* flippedPixels;
-	int srcIndex;
-	int dstIndex;
-	time_t now;
-	struct tm* timeinfo;
-	char filename[256];
-	std::string filepath;
-	int x, y;
+	int width, height;
+	unsigned char* pixels = getImagePixels(width, height);
+	unsigned char* flippedPixels = flipImageVertically(pixels, width, height);
 	
-	width = globalImg->getWidth();
-	height = globalImg->getHeight();
-	pixels = new unsigned char[width * height * 4];
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
-	flippedPixels = new unsigned char[width * height * 4];
-	
-	// y軸反転
-	y = 0;
-	while (y < height)
-	{
-		x = 0;
-		while (x < width)
-		{
-			srcIndex = ((height - 1 - y) * width + x) * 4;
-			dstIndex = (y * width + x) * 4;
-			flippedPixels[dstIndex + 0] = pixels[srcIndex + 0];
-			flippedPixels[dstIndex + 1] = pixels[srcIndex + 1];
-			flippedPixels[dstIndex + 2] = pixels[srcIndex + 2];
-			flippedPixels[dstIndex + 3] = pixels[srcIndex + 3];
-			x++;
-		}
-		y++;
-	}
-	
-	// XPMファイル名を生成
-	now = time(0);
-	timeinfo = localtime(&now);
-	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d%H%M%S.xpm", timeinfo);
-	
-	// outputディレクトリを作成
-	struct stat st = {0};
-	if (stat("output", &st) == -1)
-		mkdir("output", 0700);
-		
-	filepath = "output/" + std::string(filename);
+	std::string filepath = generateFilename("xpm");
 	
 	// XPMファイルに書き込み
 	std::ofstream file(filepath);
@@ -542,15 +496,13 @@ void saveImageXPM()
 	int colorIndex = 0;
 	
 	std::cout << "色を収集中..." << std::endl;
-	y = 0;
-	while (y < height && colorIndex < 94) 
+	for (int y = 0; y < height && colorIndex < 94; y++)
 	{
-		x = 0;
-		while (x < width && colorIndex < 94) 
+		for (int x = 0; x < width && colorIndex < 94; x++)
 		{
 			int pixelIndex = (y * width + x) * 4;
 			
-			// RGB値を16進数文字列に変換
+			// RGB値を16進文字列に変換
 			std::stringstream ss;
 			ss << "#" << std::hex << std::uppercase << std::setfill('0') 
 			   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
@@ -565,37 +517,6 @@ void saveImageXPM()
 				colorList.push_back(colorStr);
 				colorIndex++;
 			}
-			x++;
-		}
-		y++;
-	}
-	
-	// まだ全ピクセルをチェックできていない場合、残りをスキャン
-	if (colorIndex < 94)
-	{
-		while (y < height)
-		{
-			x = 0;
-			while (x < width && colorIndex < 94)
-			{
-				int pixelIndex = (y * width + x) * 4;
-				
-				std::stringstream ss;
-				ss << "#" << std::hex << std::uppercase << std::setfill('0') 
-				   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
-				   << std::setw(2) << (int)flippedPixels[pixelIndex + 1] 
-				   << std::setw(2) << (int)flippedPixels[pixelIndex + 2];
-				std::string colorStr = ss.str();
-				
-				if (colorMap.find(colorStr) == colorMap.end()) 
-				{
-					colorMap[colorStr] = colorChars[colorIndex];
-					colorList.push_back(colorStr);
-					colorIndex++;
-				}
-				x++;
-			}
-			y++;
 		}
 	}
 	
@@ -609,28 +530,24 @@ void saveImageXPM()
 	file << "\"" << width << " " << height << " " << colorList.size() << " 1\"," << std::endl;
 	
 	// カラーパレット定義
-	size_t i = 0;
-	while (i < colorList.size()) 
+	for (size_t i = 0; i < colorList.size(); i++)
 	{
 		char colorChar = colorMap[colorList[i]];
 		file << "\"" << colorChar << " c " << colorList[i] << "\"";
 		if (i < colorList.size() - 1 || height > 0) file << ",";
 		file << std::endl;
-		i++;
 	}
 	
 	// ピクセルデータ
 	std::cout << "ピクセルデータを書き出し中..." << std::endl;
-	y = 0;
-	while (y < height) 
+	for (int y = 0; y < height; y++)
 	{
 		file << "\"";
-		x = 0;
-		while (x < width) 
+		for (int x = 0; x < width; x++)
 		{
 			int pixelIndex = (y * width + x) * 4;
 			
-			// RGB値を16進数文字列に変換
+			// RGB値を16進文字列に変換
 			std::stringstream ss;
 			ss << "#" << std::hex << std::uppercase << std::setfill('0') 
 			   << std::setw(2) << (int)flippedPixels[pixelIndex + 0]
@@ -645,7 +562,6 @@ void saveImageXPM()
 				// colorMapに存在しない色の場合、最初の色（通常は背景色）を使用
 				file << colorChars[0];
 			}
-			x++;
 		}
 		file << "\"";
 		if (y < height - 1) file << ",";
@@ -655,16 +571,15 @@ void saveImageXPM()
 		if (height > 1000 && y % (height / 10) == 0) {
 			std::cout << "進捗: " << (y * 100 / height) << "%" << std::endl;
 		}
-		y++;
 	}
 	
 	file << "};" << std::endl;
 	file.close();
 	
 	if (file.good())
-		std::cout << "XPM画像が保存されました: " << filename << std::endl;
+		std::cout << "XPM画像が保存されました: " << filepath << std::endl;
 	else
-		std::cerr << "XPM画像の保存に失敗しました!" << std::endl;
+		std::cerr << "XMP画像の保存に失敗しました!" << std::endl;
 	
 	delete[] pixels;
 	delete[] flippedPixels;
