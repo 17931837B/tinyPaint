@@ -60,6 +60,7 @@ int main(void)
 	std::cout << "Ctrl+Shift+Z or Ctrl+Y: Redo" << std::endl;
 	std::cout << "=== Save ===" << std::endl;
 	std::cout << "S: Save image to PNG file" << std::endl;
+	std::cout << "X: Save image to XPM file" << std::endl;
 	
 	while (!glfwWindowShouldClose(window))
 	{
