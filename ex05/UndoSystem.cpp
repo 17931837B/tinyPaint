@@ -20,69 +20,76 @@ bool	UndoSystem::initialize(int width, int height)
 {
 	_imageWidth = width;
 	_imageHeight = height;
-	
-	// 既存のアンドゥファイルを削除
+	_beforeStrokeData = new unsigned char[width * height * 4];
+	// もし既存の.undo_stack.datがあったら削除
 	remove(UNDO_FILE_NAME);
-	
-	// アンドゥファイルを作成
+	// .undo_stack.datを作成
 	_undoFile.open(UNDO_FILE_NAME, std::ios::binary | std::ios::out | std::ios::app);
 	if (!_undoFile.is_open())
 	{
 		std::cerr << "Failed to create undo file: " << UNDO_FILE_NAME << std::endl;
 		return (false);
 	}
-	
-	// バックグラウンドワーカースレッドを開始
+	// スレッド開始
 	_shouldStop = false;
 	_workerThread = std::thread(&UndoSystem::workerFunction, this);
-	
-	// ストローク用バッファを確保
-	_beforeStrokeData = new unsigned char[width * height * 4];
-	
-	std::cout << "Undo system initialized. Max levels: " << MAX_UNDO_LEVELS << std::endl;
 	return (true);
 }
 
+// バックグラウンドのスレッドループ処理
+void UndoSystem::workerFunction()
+{
+	while (!_shouldStop)
+	{
+		// タスクキューをロック
+		std::unique_lock<std::mutex> lock(_queueMutex);
+		// タスクが来るかstopシグナルが来るまで待機
+		_taskCondition.wait(lock, [this]{return !_taskQueue.empty() || _shouldStop; });
+		// _shouldStoでwaitを抜けていたらループを抜ける
+		if (_shouldStop)
+			break ;
+		// キューからタスクを取得
+		UndoTask task = _taskQueue.front();
+		_taskQueue.pop();
+		// ロックを解除
+		lock.unlock();
+		processTask(task);
+	}
+}
+
+// undoのシャットダウン
 void	UndoSystem::cleanup()
 {
-	// ワーカースレッドを停止
+	// スレッドを停止
 	_shouldStop = true;
 	_taskCondition.notify_all();
+	// メインスレッドの実行を待機
 	if (_workerThread.joinable())
-	{
 		_workerThread.join();
-	}
-	
-	// ファイルを閉じる
+	// .undo_stack.datを閉じる
 	if (_undoFile.is_open())
-	{
 		_undoFile.close();
-	}
-	
-	// バッファを解放
+	// バッファの解放
 	if (_beforeStrokeData)
 	{
 		delete[] _beforeStrokeData;
 		_beforeStrokeData = nullptr;
 	}
-	
-	// アンドゥファイルを削除
+	// .undo_stack.datを削除
 	remove(UNDO_FILE_NAME);
-	
-	std::cout << "Undo system cleaned up." << std::endl;
 }
 
+// 書き出し前の状態保存
 void	UndoSystem::beginStroke()
 {
+	// ストローク中ならば何もせず
 	if (_isStrokeActive)
-		return;
-	
+		return ;
 	_isStrokeActive = true;
 	_strokeMinX = _imageWidth;
 	_strokeMinY = _imageHeight;
 	_strokeMaxX = -1;
 	_strokeMaxY = -1;
-	
 	// 現在の画像状態を保存
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glReadPixels(0, 0, _imageWidth, _imageHeight, GL_RGBA, GL_UNSIGNED_BYTE, _beforeStrokeData);
@@ -92,77 +99,11 @@ void	UndoSystem::beginStroke()
 void	UndoSystem::updateStroke(float x, float y, float radius)
 {
 	if (!_isStrokeActive)
-		return;
-	
+		return ;
 	updateBoundingBox(x, y, radius);
 }
 
-void	UndoSystem::endStroke()
-{
-	int							margin;
-	unsigned char*				afterStrokeData;
-	ImageDiff					diff;
-	std::lock_guard<std::mutex>	lock(_queueMutex);
-	size_t						i;
-
-	if (!_isStrokeActive)
-		return;
-	
-	_isStrokeActive = false;
-	
-	// バウンディングボックスが有効かチェック
-	if (_strokeMaxX < _strokeMinX || _strokeMaxY < _strokeMinY)
-	{
-		return; // 何も描画されていない
-	}
-	
-	// マージンを追加
-	margin = 5;
-	_strokeMinX = std::max(0, _strokeMinX - margin);
-	_strokeMinY = std::max(0, _strokeMinY - margin);
-	_strokeMaxX = std::min(_imageWidth - 1, _strokeMaxX + margin);
-	_strokeMaxY = std::min(_imageHeight - 1, _strokeMaxY + margin);
-	
-	// 現在の画像状態を読み取り
-	afterStrokeData = new unsigned char[_imageWidth * _imageHeight * 4];
-	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-	glReadPixels(0, 0, _imageWidth, _imageHeight, GL_RGBA, GL_UNSIGNED_BYTE, afterStrokeData);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
-	// 差分を作成
-	// RLE圧縮
-	diff.setBeforeData(ImageDiff::compressRLE(_beforeStrokeData, _imageWidth, _imageHeight, 
-											_strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY));
-	diff.setAfterData(ImageDiff::compressRLE(afterStrokeData, _imageWidth, _imageHeight,
-										   _strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY));
-	
-	// バウンディングボックスをdiffに設定
-	diff.setBoundingBox(_strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY);
-
-	delete[] afterStrokeData;
-	
-	// バックグラウンドタスクに追加
-	// 現在位置より後のエントリを無効化
-	i = _currentPosition + 1;
-	while (i < _undoStack.size())
-	{
-		_undoStack[i].setIsValid(false);
-		i++;
-	}
-	_undoStack.erase(_undoStack.begin() + _currentPosition + 1, _undoStack.end());
-	
-	// スタックサイズ制限
-	if (_undoStack.size() >= MAX_UNDO_LEVELS)
-	{
-		_undoStack.erase(_undoStack.begin());
-		_currentPosition--;
-	}
-	
-	_taskQueue.push(UndoTask(UndoTask::SAVE_DIFF, diff, _undoStack.size()));
-	
-	_taskCondition.notify_one();
-}
-
+// バウディングボックスで変更する範囲を更新
 void	UndoSystem::updateBoundingBox(float x, float y, float radius)
 {
 	int	minX;
@@ -181,6 +122,57 @@ void	UndoSystem::updateBoundingBox(float x, float y, float radius)
 	_strokeMaxY = std::max(_strokeMaxY, maxY);
 }
 
+void	UndoSystem::endStroke()
+{
+	int							margin;
+	unsigned char*				afterStrokeData;
+	ImageDiff					diff;
+	std::lock_guard<std::mutex>	lock(_queueMutex);
+	size_t						i;
+
+	if (!_isStrokeActive)
+		return ;
+	_isStrokeActive = false;
+	
+	// バウンディングボックスが更新されたか
+	if (_strokeMaxX < _strokeMinX || _strokeMaxY < _strokeMinY)
+		return ;
+	// マージンを設ける
+	margin = 5;
+	_strokeMinX = std::max(0, _strokeMinX - margin);
+	_strokeMinY = std::max(0, _strokeMinY - margin);
+	_strokeMaxX = std::min(_imageWidth - 1, _strokeMaxX + margin);
+	_strokeMaxY = std::min(_imageHeight - 1, _strokeMaxY + margin);
+	// 現在の画像状態を読み取り
+	afterStrokeData = new unsigned char[_imageWidth * _imageHeight * 4];
+	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+	glReadPixels(0, 0, _imageWidth, _imageHeight, GL_RGBA, GL_UNSIGNED_BYTE, afterStrokeData);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// RLE圧縮を用いて差分を作成
+	diff.setBeforeData(ImageDiff::compressRLE(_beforeStrokeData, _imageWidth, _imageHeight, _strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY));
+	diff.setAfterData(ImageDiff::compressRLE(afterStrokeData, _imageWidth, _imageHeight, _strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY));
+	// バウンディングボックスをdiffに設定
+	diff.setBoundingBox(_strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY);
+	delete[] afterStrokeData;
+	// 履歴の枝分かれ対策
+	i = _currentPosition + 1;
+	while (i < _undoStack.size())
+	{
+		_undoStack[i].setIsValid(false);
+		i++;
+	}
+	_undoStack.erase(_undoStack.begin() + _currentPosition + 1, _undoStack.end());
+	// スタックサイズを念の為制限(安全のため、いらないかも、)
+	if (_undoStack.size() >= MAX_UNDO_LEVELS)
+	{
+		_undoStack.erase(_undoStack.begin());
+		_currentPosition--;
+	}
+	_taskQueue.push(UndoTask(UndoTask::SAVE_DIFF, diff, _undoStack.size()));
+	// バックグラウンドスレッドに作業が来たことを通知
+	_taskCondition.notify_one();
+}
+
 bool	UndoSystem::canUndo() const
 {
 	return (_currentPosition >= 0);
@@ -188,6 +180,7 @@ bool	UndoSystem::canUndo() const
 
 bool	UndoSystem::canRedo() const
 {
+	// リドゥ履歴がアンドゥスタック内に存在するか。また、リドゥ対象の履歴が有効であるか。
 	return (static_cast<size_t>(_currentPosition + 1) < _undoStack.size() && _undoStack[_currentPosition + 1].getIsValid());
 }
 
@@ -317,24 +310,6 @@ void	UndoSystem::redo()
 	delete[] regionData;
 	
 	std::cout << "Redo applied. Position: " << _currentPosition << std::endl;
-}
-
-void	UndoSystem::workerFunction()
-{
-	while (!_shouldStop)
-	{
-		std::unique_lock<std::mutex> lock(_queueMutex);
-		_taskCondition.wait(lock, [this] { return !_taskQueue.empty() || _shouldStop; });
-		
-		if (_shouldStop)
-			break;
-		
-		UndoTask task = _taskQueue.front();
-		_taskQueue.pop();
-		lock.unlock();
-		
-		processTask(task);
-	}
 }
 
 void	UndoSystem::processTask(const UndoTask& task)

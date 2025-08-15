@@ -15,8 +15,8 @@
 #include "UndoStackEntry.hpp"
 #include "UndoTask.hpp"
 
-#define UNDO_FILE_NAME "undo_stack.dat"
-#define MAX_UNDO_LEVELS 100
+#define UNDO_FILE_NAME ".undo_stack.dat"
+#define MAX_UNDO_LEVELS 200
 
 class UndoSystem
 {
@@ -31,7 +31,7 @@ class UndoSystem
 		std::queue<UndoTask>		_taskQueue;
 		std::mutex					_queueMutex;
 		std::condition_variable		_taskCondition;
-		std::atomic<bool>			_shouldStop;
+		std::atomic<bool>			_shouldStop; // 複数のスレッドが同時に読み書きしても安全なように設計する型
 		
 		// 現在のブラシストローク追跡用
 		bool						_isStrokeActive;
