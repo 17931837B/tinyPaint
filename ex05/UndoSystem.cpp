@@ -27,7 +27,7 @@ bool	UndoSystem::initialize(int width, int height)
 	_undoFile.open(UNDO_FILE_NAME, std::ios::binary | std::ios::out | std::ios::app);
 	if (!_undoFile.is_open())
 	{
-		std::cerr << "Failed to create undo file: " << UNDO_FILE_NAME << std::endl;
+		std::cerr << "Error: " << UNDO_FILE_NAME << std::endl;
 		return (false);
 	}
 	// スレッド開始
@@ -184,6 +184,7 @@ bool	UndoSystem::canRedo() const
 	return (static_cast<size_t>(_currentPosition + 1) < _undoStack.size() && _undoStack[_currentPosition + 1].getIsValid());
 }
 
+// undo操作
 void	UndoSystem::undo()
 {
 	UndoStackEntry	entry;
@@ -198,26 +199,20 @@ void	UndoSystem::undo()
 	int				dstIndex;
 
 	if (!canUndo())
-		return;
-	
+		return ;
 	entry = _undoStack[_currentPosition];
 	diff = loadDiffFromFile(entry.getFileOffset(), entry.getDataSize());
-	
 	// 現在の画像データを読み取り
 	currentData = new unsigned char[_imageWidth * _imageHeight * 4];
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glReadPixels(0, 0, _imageWidth, _imageHeight, GL_RGBA, GL_UNSIGNED_BYTE, currentData);
-	
-	// beforeデータで復元（差分領域のみ）
-	ImageDiff::decompressRLE(diff.getBeforeData(), currentData, _imageWidth, _imageHeight,
-						   diff.getMinX(), diff.getMinY(), diff.getMaxX(), diff.getMaxY());
-	
+	// beforeデータでストローク前のピクセルデータを、currentDataの該当する領域に上書きして復元
+	ImageDiff::decompressRLE(diff.getBeforeData(), currentData, _imageWidth, _imageHeight, diff.getMinX(), diff.getMinY(), diff.getMaxX(), diff.getMaxY());
 	// 差分領域のみをテクスチャに更新
 	glBindTexture(GL_TEXTURE_2D, texId);
 	regionWidth = diff.getMaxX() - diff.getMinX() + 1;
 	regionHeight = diff.getMaxY() - diff.getMinY() + 1;
-	
-	// 差分領域のデータを抽出
+	// 差分領域のデータ抽出
 	regionData = new unsigned char[regionWidth * regionHeight * 4];
 	y = 0;
 	while (y < regionHeight)
@@ -235,19 +230,16 @@ void	UndoSystem::undo()
 		}
 		y++;
 	}
-	
 	// 差分領域のみを更新
 	glTexSubImage2D(GL_TEXTURE_2D, 0, diff.getMinX(), diff.getMinY(), 
 					regionWidth, regionHeight, GL_RGBA, GL_UNSIGNED_BYTE, regionData);
-	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	delete[] currentData;
 	delete[] regionData;
-	
 	_currentPosition--;
-	std::cout << "Undo applied. Position: " << _currentPosition << std::endl;
 }
 
+// redo操作
 void	UndoSystem::redo()
 {
 	UndoStackEntry	entry;
@@ -262,27 +254,22 @@ void	UndoSystem::redo()
 	int				dstIndex;
 
 	if (!canRedo())
-		return;
-	
+		return ;
+	// rido対象に移動
 	_currentPosition++;
 	entry = _undoStack[_currentPosition];
 	diff = loadDiffFromFile(entry.getFileOffset(), entry.getDataSize());
-	
 	// 現在の画像データを読み取り
 	currentData = new unsigned char[_imageWidth * _imageHeight * 4];
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glReadPixels(0, 0, _imageWidth, _imageHeight, GL_RGBA, GL_UNSIGNED_BYTE, currentData);
-	
-	// afterデータで復元（差分領域のみ）
-	ImageDiff::decompressRLE(diff.getAfterData(), currentData, _imageWidth, _imageHeight,
-						   diff.getMinX(), diff.getMinY(), diff.getMaxX(), diff.getMaxY());
-	
+	// afterデータでストローク前のピクセルデータを、currentDataの該当する領域に上書きして復元
+	ImageDiff::decompressRLE(diff.getAfterData(), currentData, _imageWidth, _imageHeight, diff.getMinX(), diff.getMinY(), diff.getMaxX(), diff.getMaxY());
 	// 差分領域のみをテクスチャに更新
 	glBindTexture(GL_TEXTURE_2D, texId);
 	regionWidth = diff.getMaxX() - diff.getMinX() + 1;
 	regionHeight = diff.getMaxY() - diff.getMinY() + 1;
-	
-	// 差分領域のデータを抽出
+	// 差分領域のデータ抽出
 	regionData = new unsigned char[regionWidth * regionHeight * 4];
 	y = 0;
 	while (y < regionHeight)
@@ -300,7 +287,6 @@ void	UndoSystem::redo()
 		}
 		y++;
 	}
-	
 	// 差分領域のみを更新
 	glTexSubImage2D(GL_TEXTURE_2D, 0, diff.getMinX(), diff.getMinY(), 
 					regionWidth, regionHeight, GL_RGBA, GL_UNSIGNED_BYTE, regionData);
@@ -308,8 +294,21 @@ void	UndoSystem::redo()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	delete[] currentData;
 	delete[] regionData;
-	
-	std::cout << "Redo applied. Position: " << _currentPosition << std::endl;
+}
+
+ImageDiff	UndoSystem::loadDiffFromFile(long offset, size_t /*size*/)
+{
+	std::ifstream	file(UNDO_FILE_NAME, std::ios::binary);
+	ImageDiff		diff;
+
+	if (!file.is_open())
+	{
+		std::cerr << "Error: " << UNDO_FILE_NAME << std::endl;
+		return ;
+	}
+	file.seekg(offset);
+	diff.deserialize(file);
+	return (diff);
 }
 
 void	UndoSystem::processTask(const UndoTask& task)
@@ -339,23 +338,6 @@ void	UndoSystem::saveDiffToFile(const ImageDiff& diff, long& offset, size_t& siz
 	diff.serialize(_undoFile);
 	_undoFile.flush();
 	size = diff.getSerializedSize();
-}
-
-ImageDiff	UndoSystem::loadDiffFromFile(long offset, size_t /*size*/)
-{
-	std::ifstream	file(UNDO_FILE_NAME, std::ios::binary);
-	ImageDiff		diff;
-
-	if (!file.is_open())
-	{
-		throw std::runtime_error("Failed to open undo file for reading.");
-	}
-
-	file.seekg(offset);
-	
-	diff.deserialize(file);
-	
-	return (diff);
 }
 
 int	UndoSystem::getUndoCount() const
