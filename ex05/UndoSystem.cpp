@@ -4,12 +4,9 @@
 #include <cstring>
 #include <iostream>
 
-const std::string UndoSystem::UNDO_FILE_NAME = "undo_stack.dat";
-UndoSystem* g_undoSystem = nullptr;
+UndoSystem*	g_undoSystem = nullptr;
 
-UndoSystem::UndoSystem() : _currentPosition(-1), _shouldStop(false), 
-						   _isStrokeActive(false), _beforeStrokeData(nullptr),
-						   _imageWidth(0), _imageHeight(0)
+UndoSystem::UndoSystem() : _currentPosition(-1), _shouldStop(false), _isStrokeActive(false), _beforeStrokeData(nullptr), _imageWidth(0), _imageHeight(0)
 {
 	_undoStack.reserve(MAX_UNDO_LEVELS);
 }
@@ -25,7 +22,7 @@ bool	UndoSystem::initialize(int width, int height)
 	_imageHeight = height;
 	
 	// 既存のアンドゥファイルを削除
-	remove(UNDO_FILE_NAME.c_str());
+	remove(UNDO_FILE_NAME);
 	
 	// アンドゥファイルを作成
 	_undoFile.open(UNDO_FILE_NAME, std::ios::binary | std::ios::out | std::ios::app);
@@ -70,7 +67,7 @@ void	UndoSystem::cleanup()
 	}
 	
 	// アンドゥファイルを削除
-	remove(UNDO_FILE_NAME.c_str());
+	remove(UNDO_FILE_NAME);
 	
 	std::cout << "Undo system cleaned up." << std::endl;
 }

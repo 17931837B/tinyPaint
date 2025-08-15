@@ -15,12 +15,12 @@
 #include "UndoStackEntry.hpp"
 #include "UndoTask.hpp"
 
+#define UNDO_FILE_NAME "undo_stack.dat"
+#define MAX_UNDO_LEVELS 100
+
 class UndoSystem
 {
 	private:
-		static const int			MAX_UNDO_LEVELS = 50;
-		static const std::string	UNDO_FILE_NAME;
-		
 		std::vector<UndoStackEntry>	_undoStack;
 		int							_currentPosition;
 		std::string					_undoFileName;
@@ -74,7 +74,7 @@ class UndoSystem
 };
 
 // グローバルなアンドゥシステムインスタンス
-extern UndoSystem* g_undoSystem;
+extern UndoSystem*	g_undoSystem;
 
 // 初期化・クリーンアップ関数
 bool	initializeUndoSystem(int width, int height);
