@@ -46,7 +46,7 @@ class UndoSystem
 		void		workerFunction();
 		void		processTask(const UndoTask& task);
 		void		saveDiffToFile(const ImageDiff& diff, long& offset, size_t& size);
-		ImageDiff	loadDiffFromFile(long offset, size_t size);
+		ImageDiff	loadDiffFromFile(long offset);
 		void		updateBoundingBox(float x, float y, float radius);
 		
 	public:

@@ -201,7 +201,7 @@ void	UndoSystem::undo()
 	if (!canUndo())
 		return ;
 	entry = _undoStack[_currentPosition];
-	diff = loadDiffFromFile(entry.getFileOffset(), entry.getDataSize());
+	diff = loadDiffFromFile(entry.getFileOffset());
 	// 現在の画像データを読み取り
 	currentData = new unsigned char[_imageWidth * _imageHeight * 4];
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
@@ -258,7 +258,7 @@ void	UndoSystem::redo()
 	// rido対象に移動
 	_currentPosition++;
 	entry = _undoStack[_currentPosition];
-	diff = loadDiffFromFile(entry.getFileOffset(), entry.getDataSize());
+	diff = loadDiffFromFile(entry.getFileOffset());
 	// 現在の画像データを読み取り
 	currentData = new unsigned char[_imageWidth * _imageHeight * 4];
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
@@ -296,7 +296,8 @@ void	UndoSystem::redo()
 	delete[] regionData;
 }
 
-ImageDiff	UndoSystem::loadDiffFromFile(long offset, size_t /*size*/)
+// undo_stackから差分を読み込む
+ImageDiff	UndoSystem::loadDiffFromFile(long offset)
 {
 	std::ifstream	file(UNDO_FILE_NAME, std::ios::binary);
 	ImageDiff		diff;
@@ -304,38 +305,37 @@ ImageDiff	UndoSystem::loadDiffFromFile(long offset, size_t /*size*/)
 	if (!file.is_open())
 	{
 		std::cerr << "Error: " << UNDO_FILE_NAME << std::endl;
-		return ;
+		return ImageDiff();;
 	}
 	file.seekg(offset);
 	diff.deserialize(file);
 	return (diff);
 }
 
+// バックグラウンドタスクの実行
 void	UndoSystem::processTask(const UndoTask& task)
 {
 	long	offset;
 	size_t	size;
 
-	switch (task.getType())
+	if (task.getType() == UndoTask::SAVE_DIFF)
 	{
-		case UndoTask::SAVE_DIFF:
-			saveDiffToFile(task.getDiff(), offset, size);
-			{
-				std::lock_guard<std::mutex>	lock(_queueMutex);
-				UndoStackEntry				entry(offset, size);
-				_undoStack.push_back(entry);
-				_currentPosition++;
-			}
-			break;
-		default:
-			break;
+		saveDiffToFile(task.getDiff(), offset, size);
+		{
+			std::lock_guard<std::mutex>	lock(_queueMutex);
+			UndoStackEntry				entry(offset, size);
+			_undoStack.push_back(entry);
+			_currentPosition++;
+		}
 	}
 }
 
+// 差分データをファイルに書き込む処理
 void	UndoSystem::saveDiffToFile(const ImageDiff& diff, long& offset, size_t& size)
 {
 	offset = _undoFile.tellp();
 	diff.serialize(_undoFile);
+	// dataを念押しで書き出し
 	_undoFile.flush();
 	size = diff.getSerializedSize();
 }
@@ -363,17 +363,18 @@ int	UndoSystem::getRedoCount() const
 
 size_t	UndoSystem::getFileSize() const
 {
+	// std::ios::ateはポインタをファイルの末尾にする
 	std::ifstream	file(UNDO_FILE_NAME, std::ios::binary | std::ios::ate);
 	std::streampos	pos;
 
 	if (!file.is_open())
 		return (0);
-	
+	// 現在の読み込み位置を返す
 	pos = file.tellg();
 	return (static_cast<size_t>(pos));
 }
 
-// グローバル関数の実装
+// アンドゥシステムを初期化し、新しい作業セッションを開始する
 bool	initializeUndoSystem(int width, int height)
 {
 	if (g_undoSystem)
@@ -385,6 +386,7 @@ bool	initializeUndoSystem(int width, int height)
 	return (g_undoSystem->initialize(width, height));
 }
 
+// アンドゥシステムの破棄
 void	cleanupUndoSystem()
 {
 	if (g_undoSystem)
