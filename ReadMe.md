@@ -57,7 +57,7 @@ Great news for minilibx users: you can save images in the XML format (`*.xml`) b
 
 ---
 
-## Undo/Redoシステム設計とスレッドフロー分析
+## Undo/Redoシステム設計とスレッドフロー
 
 ---
 
