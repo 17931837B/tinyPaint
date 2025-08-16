@@ -53,6 +53,7 @@ void	ImageDiff::setAfterData(const std::vector<unsigned char>& data)
 	this->_afterData = data;
 }
 
+// RLE（Run-Length Encoding）アルゴリズムを用いて、画像の指定された矩形領域を圧縮する
 std::vector<unsigned char>	ImageDiff::compressRLE(const unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
 {
 	std::vector<unsigned char>	compressed;
@@ -98,11 +99,10 @@ std::vector<unsigned char>	ImageDiff::compressRLE(const unsigned char* data, int
 		}
 		y++;
 	}
-	
 	return (compressed);
 }
 
-// 修正されたdecompressRLE関数
+// 圧縮されたRLEデータを、元のピクセルデータに復元する処理
 void	ImageDiff::decompressRLE(const std::vector<unsigned char>& compressed, unsigned char* data, int width, int /*height*/, int startX, int startY, int endX, int endY)
 {
 	size_t			compressedIndex;
@@ -146,6 +146,7 @@ void	ImageDiff::serialize(std::ofstream& file) const
 	size_t	beforeSize;
 	size_t	afterSize;
 
+	// int型の_minXを、バイト単位で扱うためのconst char*型に無理やりキャストしてバイト列を書き込む
 	file.write(reinterpret_cast<const char*>(&_minX), sizeof(_minX));
 	file.write(reinterpret_cast<const char*>(&_minY), sizeof(_minY));
 	file.write(reinterpret_cast<const char*>(&_maxX), sizeof(_maxX));
