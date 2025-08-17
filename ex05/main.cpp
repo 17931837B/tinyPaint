@@ -43,24 +43,33 @@ int main(void)
 	glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
 	framebuffer_size_callback(window, initialWidth, initialHeight);
 	
-	std::cout << "Controls:" << std::endl;
-	std::cout << "=== Colors ===" << std::endl;
-	std::cout << "0: White (Eraser - overwrites with background)" << std::endl;
-	std::cout << "1: Black" << std::endl;
-	std::cout << "R: Red" << std::endl;
-	std::cout << "G: Green" << std::endl;
-	std::cout << "B: Blue" << std::endl;
-	std::cout << "=== Brush Size ===" << std::endl;
-	std::cout << "2-8: Direct size selection (5px - 120px)" << std::endl;
-	std::cout << "Current brush size: " << brushSize << "px" << std::endl;
-	std::cout << "=== Drawing ===" << std::endl;
-	std::cout << "Left mouse drag: Draw" << std::endl;
-	std::cout << "=== Undo/Redo ===" << std::endl;
-	std::cout << "Ctrl+Z: Undo" << std::endl;
-	std::cout << "Ctrl+Shift+Z or Ctrl+Y: Redo" << std::endl;
-	std::cout << "=== Save ===" << std::endl;
-	std::cout << "S: Save image to PNG file" << std::endl;
-	std::cout << "X: Save image to XPM file" << std::endl;
+std::cout << "\n";
+std::cout << "╔══════════════════════════════════════════════╗" << std::endl;
+std::cout << "║              🎨 TinyPaint Controls           ║" << std::endl;
+std::cout << "╠══════════════════════════════════════════════╣" << std::endl;
+std::cout << "║  🌈 COLORS                                   ║" << std::endl;
+std::cout << "║    0  ⚪ White (Eraser)                      ║" << std::endl;
+std::cout << "║    1  ⚫ Black                               ║" << std::endl;
+std::cout << "║    R  🔴 Red                                 ║" << std::endl;
+std::cout << "║    G  🟢 Green                               ║" << std::endl;
+std::cout << "║    B  🔵 Blue                                ║" << std::endl;
+std::cout << "╠──────────────────────────────────────────────╢" << std::endl;
+std::cout << "║  🖌️  BRUSH SIZE                               ║" << std::endl;
+std::cout << "║    2-8  Direct size (5px - 120px)            ║" << std::endl;
+std::cout << "║    Current: " << std::setw(3) << brushSize << "px                            ║" << std::endl;
+std::cout << "╠──────────────────────────────────────────────╢" << std::endl;
+std::cout << "║  🖱️  DRAWING                                  ║" << std::endl;
+std::cout << "║    Left Mouse Drag  →  Draw                  ║" << std::endl;
+std::cout << "╠──────────────────────────────────────────────╢" << std::endl;
+std::cout << "║  ⏪ UNDO/REDO                                ║" << std::endl;
+std::cout << "║    Ctrl+Z           →  Undo                  ║" << std::endl;
+std::cout << "║    Ctrl+Shift+Z/Y   →  Redo                  ║" << std::endl;
+std::cout << "╠──────────────────────────────────────────────╢" << std::endl;
+std::cout << "║  💾 SAVE                                     ║" << std::endl;
+std::cout << "║    S  →  Save as PNG                         ║" << std::endl;
+std::cout << "║    X  →  Save as XPM                         ║" << std::endl;
+std::cout << "╚══════════════════════════════════════════════╝" << std::endl;
+std::cout << "\n";
 	
 	while (!glfwWindowShouldClose(window))
 	{
