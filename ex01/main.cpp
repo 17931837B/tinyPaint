@@ -2,34 +2,12 @@
 #include <iostream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <GL/glu.h>
 #include "ImageData.hpp"
 
 GLuint		texId;
 GLuint		fboId;
 ImageData*	globalImg = nullptr;
 GLFWwindow*	window;
-
-// ImageData* createRedImage(int width, int height)
-// {
-// 	ImageData*	img;
-// 	// int			i;
-
-// 	img = new ImageData();
-// 	img->width = width;
-// 	img->height = height;
-// 	img->imageData = new unsigned char[width * height * 4];
-// 	// i = 0;
-// 	// while (i < width * height)
-// 	// {
-// 	// 	img->imageData[i * 4 + 0] = 255;
-// 	// 	img->imageData[i * 4 + 1] = 0;
-// 	// 	img->imageData[i * 4 + 2] = 0;
-// 	// 	img->imageData[i * 4 + 3] = 255;
-// 	// 	i++;
-// 	// }
-// 	return (img);
-// }
 
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
@@ -74,9 +52,6 @@ void otherInit(void)
 
 void LoadTexture()
 {
-	int	width;
-	int	height;
-
 	globalImg = new ImageData(4096, 4096);
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
@@ -90,17 +65,15 @@ void LoadTexture()
 		std::cerr << "Framebuffer is not complete!" << std::endl;
 	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glfwGetFramebufferSize(window, &width, &height); 
-	glViewport(0, 0, width, height);
 	glDeleteFramebuffers(1, &fboId);
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); 
 }
 
 void	display() 
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+	glClear(GL_COLOR_BUFFER_BIT); 
 	glLoadIdentity();
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glEnable(GL_TEXTURE_2D);
@@ -147,7 +120,6 @@ int main(void)
 	std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetKeyCallback(window, key_callback);
-	otherInit();
 	LoadTexture();
 	glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
 	framebuffer_size_callback(window, initialWidth, initialHeight);
