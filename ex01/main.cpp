@@ -9,6 +9,7 @@ GLuint		fboId;
 ImageData*	globalImg = nullptr;
 GLFWwindow*	window;
 
+// ウィンドウサイズが変更されたときに呼び出され、描画領域とアスペクト比を適切に調整する
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
 	float	textureAspect;
@@ -33,6 +34,7 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 		orthoWidth = 1.0f;
 		orthoHeight = textureAspect / windowAspect;
 	}
+	// 投影行列のセットアップ
 	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -42,12 +44,6 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
-}
-
-void otherInit(void)
-{
-	glClearColor(1.0f, 0.0f, 0.0f, 1.0f); 
-	glEnable(GL_DEPTH_TEST); //深度テスト手前のみを描写
 }
 
 void LoadTexture()
