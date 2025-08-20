@@ -18,12 +18,15 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoHeight = 1.0f;
 
 	std::cout << "Callback received width: " << width << ", height: " << height << std::endl;
+	// ビューポートの定義
 	glViewport(0, 0, width, height);
+	// 投影行列選択
 	glMatrixMode(GL_PROJECTION);
+	// 単位行列にリセット
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	std::cout << "win " <<windowAspect << " tex " <<textureAspect << std::endl;
+	std::cout << "windowAspect " <<windowAspect << " textureAspect " <<textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -34,12 +37,13 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 		orthoWidth = 1.0f;
 		orthoHeight = textureAspect / windowAspect;
 	}
-	// 投影行列のセットアップ
+	// 投影行列の描写空間定義
 	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
 
+// キー入力のコールバック関数
 void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -49,17 +53,22 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 void LoadTexture()
 {
 	globalImg = new ImageData(4096, 4096);
+	// テクスチャオブジェクトを1つ生成
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
+	// 拡大・縮小フィルタ
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// テクスチャを作成
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, globalImg->getWidth(), globalImg->getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, globalImg->getImageData());
+	// フレームバッファオブジェクトの生成
 	glGenFramebuffers(1, &fboId);
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texId, 0);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cerr << "Framebuffer is not complete!" << std::endl;
+		std::cerr << "Error: FBO" << std::endl;
 	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
+	// 初期化で赤だからいらないといえばいらない
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
