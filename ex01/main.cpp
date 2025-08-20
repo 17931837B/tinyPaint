@@ -96,15 +96,18 @@ int main(void)
 	int	initialWidth;
 	int	initialHeight;
 
+	// GLFWライブラリを初期化
 	if (!glfwInit())
 	{
 		std::cerr << "Failed to initialize GLFW" << std::endl;
 		return (-1);
 	}
+	// 使用するOpenGLのバージョンを3.3に指定
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	// プロファイルを指定
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE); 
-	window = glfwCreateWindow(4096, 4096, "TinyPaint ex01", NULL, NULL); 
+	window = glfwCreateWindow(4096, 4096, "tinyPaint", NULL, NULL); 
 	if (!window)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;
