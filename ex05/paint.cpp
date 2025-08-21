@@ -469,7 +469,7 @@ void	saveImage()
 	if (res)
 		std::cout << "Image saved as: " << filepath << std::endl;
 	else
-		std::cerr << "Error: Save" << std::endl;
+		std::cerr << "Error: save png" << std::endl;
 	delete[] pixels;
 	delete[] revPixels;
 }
@@ -579,7 +579,7 @@ void	saveImageXPM()
 	if (file.good())
 		std::cout << "success: save XPM " << filepath << std::endl;
 	else
-		std::cerr << "Error: save" << std::endl;
+		std::cerr << "Error: save xpm" << std::endl;
 	delete[] pixels;
 	delete[] revPixels;
 }

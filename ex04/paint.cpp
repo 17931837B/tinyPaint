@@ -19,13 +19,11 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoWidth = 1.0f;
 	float	orthoHeight = 1.0f;
 
-	// std::cout << "Window resized to: " << width << "x" << height << std::endl;
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	// std::cout << "Window aspect: " << windowAspect << ", Texture aspect: " << textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -39,7 +37,6 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	// std::cout << "Ortho bounds: (" << -orthoWidth << ", " << -orthoHeight << ") to (" << orthoWidth << ", " << orthoHeight << ")" << std::endl;
 }
 
 void screenToTexture(double screenX, double screenY, float& texX, float& texY)
@@ -74,8 +71,6 @@ void screenToTexture(double screenX, double screenY, float& texX, float& texY)
 	// テクスチャ座標に変換
 	texX = relativeX * globalImg->getWidth();
 	texY = (1.0f - relativeY) * globalImg->getHeight(); // Y軸反転
-	// std::cout << "Screen(" << screenX << "," << screenY << ") -> Texture(" << texX << "," << texY << ")" << std::endl;
-	// std::cout << "Draw area: (" << drawAreaX << "," << drawAreaY << ") size(" << drawAreaWidth << "x" << drawAreaHeight << ")" << std::endl;
 }
 
 // 円の描写
@@ -345,8 +340,8 @@ void saveImage()
 	int	res;
 	int	x, y;
 
-    struct stat st = {0};
-    if (stat("output", &st) == -1)
+	struct stat st = {0};
+	if (stat("output", &st) == -1)
 		mkdir("output", 0700);
 	width = globalImg->getWidth();
 	height = globalImg->getHeight();
@@ -374,13 +369,14 @@ void saveImage()
 	}
 	now = time(0);
 	timeinfo = localtime(&now);
+	// タイムスタンプ取得
 	strftime(filename, sizeof(filename), "tinyPaint_%Y%m%d%H%M%S.png", timeinfo);
 	filepath = "output/" + std::string(filename);
 	res = stbi_write_png(filepath.c_str(), width, height, 4, flippedPixels, width * 4);
 	if (res)
 		std::cout << "Image saved as: " << filename << std::endl;
 	else
-		std::cerr << "Failed to save PNG image!" << std::endl;
+		std::cerr << "Error: save png" << std::endl;
 	delete[] pixels;
 	delete[] flippedPixels;
 }
