@@ -17,13 +17,12 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoWidth = 1.0f;
 	float	orthoHeight = 1.0f;
 
-	std::cout << "Callback received width: " << width << ", height: " << height << std::endl;
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	std::cout << "win " <<windowAspect << " tex " <<textureAspect << std::endl;
+	std::cout << "windowAspect " <<windowAspect << " textureAspect " <<textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -45,17 +44,18 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-void otherInit(void)
+void	otherInit(void)
 {
 	glClearColor(1.0f, 0.0f, 0.0f, 1.0f); 
-	glEnable(GL_DEPTH_TEST); //深度テスト手前のみを描写
+	glEnable(GL_DEPTH_TEST); //深度テストを有効化。手前のみを描写
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //アルファブレンド
+	//アルファブレンド （アルファの値によって手前と奥の色が割合で混ざる）
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE); //加算ブレンド
 	glBlendEquation(GL_FUNC_ADD);
 }
 
-void LoadTexture()
+void	LoadTexture()
 {
 	int	width;
 	int	height;
@@ -70,10 +70,10 @@ void LoadTexture()
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texId, 0);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cerr << "Framebuffer is not complete!" << std::endl;
-	// glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
-	// glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-	// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		std::cerr << "Error: FBO" << std::endl;
+	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
+	glClearColor(1.0f, 0.0f, 0.0f, 0.5f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glfwGetFramebufferSize(window, &width, &height); 
 	glViewport(0, 0, width, height);
@@ -109,7 +109,7 @@ int main(void)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE); 
-	window = glfwCreateWindow(4096, 4096, "TinyPaint ex01", NULL, NULL); 
+	window = glfwCreateWindow(4096, 4096, "tinyPaint", NULL, NULL); 
 	if (!window)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;

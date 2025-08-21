@@ -17,7 +17,6 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoWidth = 1.0f;
 	float	orthoHeight = 1.0f;
 
-	std::cout << "Callback received width: " << width << ", height: " << height << std::endl;
 	// ビューポートの定義
 	glViewport(0, 0, width, height);
 	// 投影行列選択
@@ -130,6 +129,7 @@ int main(void)
 	glfwSetKeyCallback(window, key_callback);
 	LoadTexture();
 	glfwGetFramebufferSize(window, &initialWidth, &initialHeight);
+	// 念の為手動で一度呼び出す。
 	framebuffer_size_callback(window, initialWidth, initialHeight);
 	while (!glfwWindowShouldClose(window))
 	{
