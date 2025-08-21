@@ -8,7 +8,7 @@ bool		isDragging = false;
 double		lastMouseX = 0.0;
 double		lastMouseY = 0.0;
 float		brushSize = 30.0f;
-int currentBrushSizeIndex = 3;
+int			currentBrushSizeIndex = 3;
 
 void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
@@ -17,13 +17,11 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	float	orthoWidth = 1.0f;
 	float	orthoHeight = 1.0f;
 
-	// std::cout << "Window resized to: " << width << "x" << height << std::endl;
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	// std::cout << "Window aspect: " << windowAspect << ", Texture aspect: " << textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -37,21 +35,22 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	gluOrtho2D(-orthoWidth, orthoWidth, -orthoHeight, orthoHeight);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	// std::cout << "Ortho bounds: (" << -orthoWidth << ", " << -orthoHeight << ") to (" << orthoWidth << ", " << orthoHeight << ")" << std::endl;
 }
 
-void screenToTexture(double screenX, double screenY, float& texX, float& texY)
+// スクリーン上のマウスカーソルの座標をテクスチャの座標に変換
+void	screenToTexture(double screenX, double screenY, float& texX, float& texY)
 {
 	int	windowWidth, windowHeight;
 	float	textureAspect;
 	float	windowAspect;
-	float drawAreaX, drawAreaY, drawAreaWidth, drawAreaHeight;
-	float relativeX;
-	float relativeY;
+	float	drawAreaX, drawAreaY, drawAreaWidth, drawAreaHeight;
+	float	relativeX;
+	float	relativeY;
 
 	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)windowWidth / (float)windowHeight;
+	// 横長
 	if (windowAspect > textureAspect)
 	{
 		drawAreaHeight = (float)windowHeight;
@@ -59,6 +58,7 @@ void screenToTexture(double screenX, double screenY, float& texX, float& texY)
 		drawAreaX = ((float)windowWidth - drawAreaWidth) * 0.5f;
 		drawAreaY = 0.0f;
 	} 
+	// 縦長
 	else
 	{
 		drawAreaWidth = (float)windowWidth;
@@ -83,9 +83,12 @@ void	drawCircle(float centerX, float centerY, float radius)
 	float	angle, x, y;
 
 	glBegin(GL_TRIANGLE_FAN);
+	// 描画する頂点の色を指定
 	glColor4f(currentBrushColor.r, currentBrushColor.g, currentBrushColor.b, currentBrushColor.a);
+	// 中心点指定
 	glVertex2f(centerX, centerY);
 	i = 0;
+	// 16角形の生成
 	while (i <= CIRCLE_SEGMENTS)
 	{
 		angle = 2.0f * M_PI * i / CIRCLE_SEGMENTS;
@@ -110,11 +113,13 @@ void	drawLine(float x1, float y1, float x2, float y2)
 	dx = x2 - x1;
 	dy = y2 - y1;
 	distance = sqrt(dx * dx + dy * dy);
+	// 距離が十分に短ければ点を描写
 	if (distance < 1.0f)
 	{
 		drawCircle(x2, y2, brushSize / 2.0f);
 		return ;
 	}
+	// ブラシサイズと移動距離を考慮して点の数を決定
 	steps = (int)(distance / (brushSize * 0.2f)) + 1;
 	i = 0;
 	while (i <= steps)
@@ -127,20 +132,26 @@ void	drawLine(float x1, float y1, float x2, float y2)
 	}
 }
 
-void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /*mods*/)
+// マウスのボタンが反応したときに呼ばれるコールバック関数
+void	mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /*mods*/)
 {
 	float	texX, texY;
 	int		windowWidth, windowHeight;
 
+	// 左ボタンか
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
+		// 押されたか
 		if (action == GLFW_PRESS)
 		{
 			isDragging = true;
 			glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
+			// 始点の決定
 			screenToTexture(lastMouseX, lastMouseY, texX, texY);
+			// 有効範囲内か
 			if (texX >= 0 && texX < globalImg->getWidth() && texY >= 0 && texY < globalImg->getHeight())
 			{
+				// フレームバッファの初期設定
 				glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 				glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
 				glMatrixMode(GL_PROJECTION);
@@ -148,20 +159,24 @@ void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /
 				gluOrtho2D(0, globalImg->getWidth(), 0, globalImg->getHeight());
 				glMatrixMode(GL_MODELVIEW);
 				glLoadIdentity();
+				// 点を描写
 				drawCircle(texX, texY, brushSize / 2.0f);
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 				framebuffer_size_callback(window, windowWidth, windowHeight);
 			}
 		}
+		// 離したか
 		else if (action == GLFW_RELEASE)
 			isDragging = false;
 	}
 }
 
+// マウスを動かしたときに呼び出されるコールバック関数
 void	cursor_position_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 {
-	float texX1, texY1, texX2, texY2;
+	float	texX1, texY1, texX2, texY2;
+	int		windowWidth, windowHeight;
 
 	if (isDragging)
 	{
@@ -170,6 +185,7 @@ void	cursor_position_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 		if (texX1 >= 0 && texX1 < globalImg->getWidth() && texY1 >= 0 && texY1 < globalImg->getHeight() &&
 			texX2 >= 0 && texX2 < globalImg->getWidth() && texY2 >= 0 && texY2 < globalImg->getHeight())
 		{
+			// fbo切り替え
 			glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 			glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
 			glMatrixMode(GL_PROJECTION);
@@ -177,10 +193,11 @@ void	cursor_position_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 			gluOrtho2D(0, globalImg->getWidth(), 0, globalImg->getHeight());
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
+			// 線の描写
 			drawLine(texX1, texY1, texX2, texY2);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			int windowWidth, windowHeight;
 			glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+			// ビューポートと投影行列の設定を戻す
 			framebuffer_size_callback(window, windowWidth, windowHeight);
 		}
 		lastMouseX = xpos;
@@ -199,7 +216,7 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 				break;
 			case GLFW_KEY_0:
 				currentBrushColor = {1.0f, 1.0f, 1.0f, 1.0f};
-				std::cout << "Brush color: White (Eraser - overwrites with background)" << std::endl;
+				std::cout << "Brush color: White" << std::endl;
 				break ;
 			case GLFW_KEY_1:
 				currentBrushColor = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -272,7 +289,7 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 	}
 }
 
-void otherInit(void)
+void	otherInit(void)
 {
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 背景は白
 	glEnable(GL_DEPTH_TEST);
@@ -297,7 +314,7 @@ void LoadTexture()
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texId, 0);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cerr << "Framebuffer is not complete!" << std::endl;
+		std::cerr << "Error: FBO" << std::endl;
 	glViewport(0, 0, globalImg->getWidth(), globalImg->getHeight());
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -305,7 +322,7 @@ void LoadTexture()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glfwGetFramebufferSize(window, &width, &height); 
 	glViewport(0, 0, width, height);
-	glClearColor(1.0f, 0.9f, 0.9f, 1.0f);
+	glClearColor(1.0f, 0.9f, 0.9f, 1.0f); // 背景色
 }
 
 void	display() 

@@ -52,6 +52,7 @@ void	otherInit(void)
 	//アルファブレンド （アルファの値によって手前と奥の色が割合で混ざる）
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE); //加算ブレンド
+	// 色をどのように結合するか
 	glBlendEquation(GL_FUNC_ADD);
 }
 

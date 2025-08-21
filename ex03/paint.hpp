@@ -16,7 +16,7 @@ const float BRUSH_SIZES[] = {5.0f, 10.0f, 20.0f, 30.0f, 50.0f, 80.0f, 120.0f};
 
 struct BrushColor
 {
-	float r, g, b, a;
+	float	r, g, b, a;
 };
 
 extern GLuint		texId;

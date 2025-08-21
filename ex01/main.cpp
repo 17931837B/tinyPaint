@@ -80,8 +80,11 @@ void	display()
 	glClear(GL_COLOR_BUFFER_BIT); 
 	glLoadIdentity();
 	glBindTexture(GL_TEXTURE_2D, texId);
+	// テクスチャマッピングの有効化
 	glEnable(GL_TEXTURE_2D);
+	// 四角形を描画
 	glBegin(GL_QUADS);
+	// テクスチャの座標を設定して頂点の位置を指定
 	glTexCoord2f(0.f, 0.f); glVertex3f(-1.0f, -1.0f, 0.f);
 	glTexCoord2f(1.f, 0.f); glVertex3f( 1.0f, -1.0f, 0.f);
 	glTexCoord2f(1.f, 1.f); glVertex3f( 1.0f,  1.0f, 0.f);
