@@ -141,6 +141,7 @@ void	ImageDiff::decompressRLE(const std::vector<unsigned char>& compressed, unsi
 	}
 }
 
+// ImageDiffオブジェクトを.undo_stack.datファイルにバイナリ形式で保存
 void	ImageDiff::serialize(std::ofstream& file) const
 {
 	size_t	beforeSize;
@@ -161,6 +162,7 @@ void	ImageDiff::serialize(std::ofstream& file) const
 		file.write(reinterpret_cast<const char*>(_afterData.data()), afterSize);
 }
 
+// ファイルからバイナリデータを読み取り、ImageDiffを復元
 void	ImageDiff::deserialize(std::ifstream& file)
 {
 	size_t	beforeSize;
