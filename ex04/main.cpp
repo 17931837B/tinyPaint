@@ -2,7 +2,7 @@
 
 GLFWwindow* window;
 
-int main(void)
+int	main(void)
 {
 	int	initialWidth;
 	int	initialHeight;

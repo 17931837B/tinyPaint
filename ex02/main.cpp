@@ -22,7 +22,7 @@ void	framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 	glLoadIdentity();
 	textureAspect = (float)globalImg->getWidth() / (float)globalImg->getHeight();
 	windowAspect = (float)width / (float)height;
-	std::cout << "windowAspect " <<windowAspect << " textureAspect " <<textureAspect << std::endl;
+	// std::cout << "windowAspect " <<windowAspect << " textureAspect " <<textureAspect << std::endl;
 	if (windowAspect > textureAspect)
 	{
 		orthoWidth = windowAspect / textureAspect;
@@ -58,9 +58,6 @@ void	otherInit(void)
 
 void	LoadTexture()
 {
-	int	width;
-	int	height;
-
 	globalImg = new ImageData(4096, 4096);
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
@@ -76,8 +73,6 @@ void	LoadTexture()
 	glClearColor(1.0f, 0.0f, 0.0f, 0.5f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glfwGetFramebufferSize(window, &width, &height); 
-	glViewport(0, 0, width, height);
 	glDeleteFramebuffers(1, &fboId);
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); 
 }
@@ -97,7 +92,7 @@ void	display()
 	glDisable(GL_TEXTURE_2D);
 }
 
-int main(void)
+int	main(void)
 {
 	int	initialWidth;
 	int	initialHeight;

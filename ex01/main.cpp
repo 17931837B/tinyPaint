@@ -49,7 +49,7 @@ void	key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-void LoadTexture()
+void	LoadTexture()
 {
 	globalImg = new ImageData(4096, 4096);
 	// テクスチャオブジェクトを1つ生成
@@ -93,7 +93,7 @@ void	display()
 	glDisable(GL_TEXTURE_2D);
 }
 
-int main(void)
+int	main(void)
 {
 	int	initialWidth;
 	int	initialHeight;
